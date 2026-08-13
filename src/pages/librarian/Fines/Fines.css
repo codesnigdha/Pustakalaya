@@ -1,0 +1,145 @@
+.lib-fines-page {
+  max-width: 1300px;
+  margin: auto;
+}
+
+.lib-fine-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.lib-fine-stats > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 17px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+}
+
+.lib-fine-stats svg {
+  color: var(--primary);
+}
+
+.lib-fine-stats span {
+  color: var(--text-muted);
+  font-size: 8px;
+}
+
+.lib-fine-stats strong {
+  margin-left: auto;
+  font-family: "Playfair Display", serif;
+  font-size: 20px;
+}
+
+.lib-fine-search {
+  margin-bottom: 15px;
+}
+
+.lib-fine-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lib-fine-card {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+}
+
+.lib-fine-icon {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.lib-fine-info {
+  flex: 1;
+}
+
+.lib-fine-info strong {
+  display: block;
+  font-size: 10px;
+}
+
+.lib-fine-info span {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 8px;
+}
+
+.lib-fine-date {
+  color: var(--text-muted);
+  font-size: 8px;
+}
+
+.lib-fine-amount {
+  min-width: 55px;
+  text-align: right;
+  font-size: 11px;
+}
+
+.lib-fine-status {
+  padding: 6px 9px;
+  border-radius: 20px;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.lib-fine-status.pending {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.lib-fine-status.paid {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.lib-fine-card button {
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: var(--primary);
+  color: white;
+  font-size: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 750px) {
+  .lib-fine-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .lib-fine-card {
+    flex-wrap: wrap;
+  }
+
+  .lib-fine-info {
+    min-width: calc(100% - 55px);
+  }
+
+  .lib-fine-date {
+    margin-left: 51px;
+  }
+
+  .lib-fine-amount {
+    margin-left: auto;
+  }
+}

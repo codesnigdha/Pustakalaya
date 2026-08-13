@@ -1,0 +1,238 @@
+.guest-restriction-overlay {
+  position: fixed;
+
+  z-index: 3000;
+
+  inset: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(0, 0, 0, 0.62);
+
+  backdrop-filter: blur(6px);
+}
+
+.guest-restriction-modal {
+  position: relative;
+
+  width: min(450px, 100%);
+
+  padding: 35px;
+
+  border: 1px solid var(--border);
+
+  border-radius: 18px;
+
+  background: var(--bg-secondary);
+
+  box-shadow: var(--shadow-lg);
+
+  text-align: center;
+
+  animation: guestModalIn 0.3s ease;
+}
+
+.guest-restriction-close {
+  position: absolute;
+
+  top: 13px;
+  right: 13px;
+
+  width: 32px;
+  height: 32px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+
+  border-radius: 50%;
+
+  background: var(--bg-tertiary);
+
+  color: var(--text-muted);
+}
+
+.guest-restriction-close:hover {
+  color: var(--danger);
+}
+
+.guest-restriction-icon {
+  width: 58px;
+  height: 58px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin: 0 auto 15px;
+
+  border-radius: 15px;
+
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+
+  color: var(--primary);
+}
+
+.guest-restriction-label {
+  color: var(--primary);
+
+  font-size: 9px;
+
+  font-weight: 700;
+
+  letter-spacing: 2px;
+}
+
+.guest-restriction-modal h2 {
+  margin-top: 8px;
+
+  font-family: "Playfair Display", serif;
+
+  font-size: 28px;
+
+  line-height: 1.15;
+}
+
+.guest-restriction-modal h2 em {
+  display: block;
+
+  color: var(--primary);
+
+  font-style: normal;
+}
+
+.guest-restriction-modal > p {
+  margin: 13px auto 20px;
+
+  color: var(--text-secondary);
+
+  font-size: 10px;
+
+  line-height: 1.7;
+}
+
+.guest-restriction-benefits {
+  display: flex;
+  flex-direction: column;
+
+  gap: 9px;
+
+  margin-bottom: 23px;
+
+  text-align: left;
+}
+
+.guest-restriction-benefits div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  color: var(--text-secondary);
+
+  font-size: 9px;
+}
+
+.guest-restriction-benefits svg {
+  color: var(--primary);
+}
+
+.guest-restriction-actions {
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 9px;
+}
+
+.guest-login,
+.guest-signup {
+  min-height: 43px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  border-radius: 8px;
+
+  font-size: 10px;
+
+  font-weight: 700;
+
+  transition: var(--transition);
+}
+
+.guest-login {
+  border: 1px solid var(--border);
+
+  background: var(--bg-primary);
+
+  color: var(--text-primary);
+}
+
+.guest-login:hover {
+  border-color: var(--primary);
+
+  color: var(--primary);
+}
+
+.guest-signup {
+  background: var(--primary);
+
+  color: white;
+}
+
+.guest-signup:hover {
+  background: var(--primary-hover);
+
+  transform: translateY(-2px);
+}
+
+.guest-continue {
+  margin-top: 16px;
+
+  border: none;
+
+  background: transparent;
+
+  color: var(--text-muted);
+
+  font-size: 9px;
+}
+
+.guest-continue:hover {
+  color: var(--primary);
+}
+
+@keyframes guestModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 500px) {
+  .guest-restriction-modal {
+    padding: 28px 20px;
+  }
+
+  .guest-restriction-modal h2 {
+    font-size: 24px;
+  }
+
+  .guest-restriction-actions {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,104 @@
+.filter-panel {
+  padding: 20px;
+
+  border: 1px solid var(--border);
+  border-radius: 12px;
+
+  background: var(--bg-secondary);
+}
+
+.filter-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding-bottom: 15px;
+
+  border-bottom: 1px solid var(--border);
+}
+
+.filter-panel-header > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  color: var(--primary);
+}
+
+.filter-panel-header h3 {
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.filter-panel-header button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  border: none;
+  background: transparent;
+
+  color: var(--text-muted);
+
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.filter-panel-header button:hover {
+  color: var(--primary);
+}
+
+.filter-section {
+  padding-top: 20px;
+}
+
+.filter-section h4 {
+  margin-bottom: 12px;
+
+  color: var(--text-primary);
+
+  font-size: 11px;
+}
+
+.filter-options {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.filter-options button {
+  padding: 9px 10px;
+
+  border: none;
+  border-radius: 6px;
+
+  background: transparent;
+
+  color: var(--text-secondary);
+
+  text-align: left;
+
+  font-size: 10px;
+
+  cursor: pointer;
+
+  transition: var(--transition);
+}
+
+.filter-options button:hover,
+.filter-options button.active {
+  background: color-mix(in srgb, var(--primary) 10%, var(--bg-secondary));
+
+  color: var(--primary);
+}
+
+@media (max-width: 800px) {
+  .filter-options {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .filter-options button {
+    border: 1px solid var(--border);
+  }
+}

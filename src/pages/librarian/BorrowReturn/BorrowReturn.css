@@ -1,0 +1,161 @@
+.lib-borrow-page {
+  max-width: 1300px;
+  margin: auto;
+}
+
+.lib-borrow-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.lib-borrow-stats > div {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  column-gap: 10px;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+}
+
+.lib-borrow-stats svg {
+  grid-row: span 2;
+  align-self: center;
+  color: var(--primary);
+}
+
+.lib-borrow-stats span {
+  color: var(--text-muted);
+  font-size: 8px;
+}
+
+.lib-borrow-stats strong {
+  margin-top: 3px;
+  font-family: "Playfair Display", serif;
+  font-size: 22px;
+}
+
+.lib-borrow-search {
+  margin-bottom: 15px;
+}
+
+.lib-borrow-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lib-borrow-card {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+}
+
+.lib-borrow-icon {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--primary) 9%, transparent);
+  color: var(--primary);
+}
+
+.lib-borrow-info {
+  min-width: 170px;
+  flex: 1;
+}
+
+.lib-borrow-info strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 10px;
+}
+
+.lib-borrow-info span {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 8px;
+}
+
+.lib-borrow-date {
+  min-width: 90px;
+}
+
+.lib-borrow-date small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 7px;
+}
+
+.lib-borrow-date strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 9px;
+}
+
+.lib-borrow-status {
+  padding: 6px 9px;
+  border-radius: 20px;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.lib-borrow-status.issued {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--primary);
+}
+
+.lib-borrow-status.overdue {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.lib-borrow-status.returned {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.lib-return-btn {
+  padding: 7px 11px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--primary);
+  font-size: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lib-return-btn:hover {
+  background: var(--primary);
+  color: white;
+}
+
+@media (max-width: 800px) {
+  .lib-borrow-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .lib-borrow-card {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .lib-borrow-info {
+    min-width: calc(100% - 55px);
+  }
+
+  .lib-borrow-date {
+    margin-left: 51px;
+  }
+}

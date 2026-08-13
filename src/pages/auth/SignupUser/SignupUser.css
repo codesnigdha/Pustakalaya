@@ -1,0 +1,600 @@
+/* =====================================================
+   PAGE
+===================================================== */
+
+.signup-user-page {
+  min-height: 100vh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 50px 25px;
+
+  background: var(--bg-primary);
+
+  color: var(--text-primary);
+}
+
+/* =====================================================
+   THEME BUTTON
+===================================================== */
+
+.signup-user-theme {
+  position: fixed;
+
+  top: 25px;
+  right: 30px;
+
+  z-index: 20;
+
+  width: 40px;
+  height: 40px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid var(--border);
+
+  border-radius: 50%;
+
+  background: var(--bg-secondary);
+
+  color: var(--text-primary);
+
+  font-size: 18px;
+
+  cursor: pointer;
+
+  transition: var(--transition);
+}
+
+.signup-user-theme:hover {
+  color: var(--primary);
+
+  border-color: var(--primary);
+
+  transform: rotate(12deg);
+}
+
+/* =====================================================
+   FORM CARD
+===================================================== */
+
+.signup-user-container {
+  width: min(820px, 100%);
+
+  margin: 20px auto;
+
+  padding: 40px 45px;
+
+  background: var(--bg-secondary);
+
+  border: 1px solid var(--border);
+
+  border-radius: 18px;
+
+  box-shadow: var(--shadow-md);
+
+  position: relative;
+}
+
+/* =====================================================
+   BACK
+===================================================== */
+
+.signup-user-back {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 6px;
+
+  margin-bottom: 18px;
+
+  color: var(--text-muted);
+
+  font-size: 9px;
+
+  text-decoration: none;
+
+  transition: var(--transition);
+}
+
+.signup-user-back:hover {
+  color: var(--primary);
+
+  transform: translateX(-2px);
+}
+
+/* =====================================================
+   HEADING
+===================================================== */
+
+.signup-user-heading {
+  margin-bottom: 25px;
+}
+
+.signup-user-heading > span {
+  display: block;
+
+  color: var(--primary);
+
+  font-size: 9px;
+
+  font-weight: 700;
+
+  letter-spacing: 2px;
+}
+
+.signup-user-heading h1 {
+  margin-top: 7px;
+
+  font-family: "Playfair Display", serif;
+
+  font-size: 40px;
+
+  line-height: 1.1;
+
+  font-weight: 700;
+}
+
+.signup-user-heading h1 em {
+  color: var(--primary);
+
+  font-style: normal;
+}
+
+.signup-user-heading p {
+  margin-top: 8px;
+
+  color: var(--text-secondary);
+
+  font-size: 10px;
+}
+
+/* =====================================================
+   ALERT
+===================================================== */
+
+.signup-user-alert {
+  margin-bottom: 14px;
+
+  padding: 11px 13px;
+
+  border-radius: 7px;
+
+  font-size: 9px;
+}
+
+.signup-user-alert.error {
+  background: var(--danger-bg);
+
+  color: var(--danger);
+}
+
+.signup-user-alert.success {
+  background: var(--success-bg);
+
+  color: var(--success);
+}
+
+/* =====================================================
+   FORM
+===================================================== */
+
+.signup-user-form {
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 14px 12px;
+}
+
+/* =====================================================
+   ACCOUNT TYPE
+===================================================== */
+
+.signup-user-account-type {
+  grid-column: 1 / -1;
+}
+
+.signup-user-account-type > label {
+  display: block;
+
+  margin-bottom: 6px;
+
+  color: var(--text-primary);
+
+  font-size: 9px;
+
+  font-weight: 700;
+}
+
+.signup-user-type-grid {
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 9px;
+}
+
+.signup-user-type-option {
+  min-height: 43px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  border: 1px solid var(--border);
+
+  border-radius: 7px;
+
+  background: var(--bg-primary);
+
+  color: var(--text-secondary);
+
+  font-family: inherit;
+
+  font-size: 10px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: var(--transition);
+}
+
+.signup-user-type-option:hover {
+  border-color: var(--primary);
+
+  color: var(--primary);
+}
+
+.signup-user-type-option.selected {
+  border-color: var(--primary);
+
+  background: color-mix(in srgb, var(--primary) 8%, var(--bg-secondary));
+
+  color: var(--primary);
+}
+
+/* =====================================================
+   FIELD
+===================================================== */
+
+.signup-user-field {
+  min-width: 0;
+}
+
+.signup-user-field.full {
+  grid-column: 1 / -1;
+}
+
+.signup-user-field label {
+  display: block;
+
+  margin-bottom: 6px;
+
+  color: var(--text-primary);
+
+  font-size: 9px;
+
+  font-weight: 700;
+}
+
+/* =====================================================
+   INPUT
+===================================================== */
+
+.signup-user-input {
+  height: 43px;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  padding: 0 11px;
+
+  border: 1px solid var(--border);
+
+  border-radius: 7px;
+
+  background: var(--bg-primary);
+
+  transition: var(--transition);
+}
+
+.signup-user-input:focus-within {
+  border-color: var(--primary);
+
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.signup-user-input > svg {
+  flex-shrink: 0;
+
+  color: var(--text-muted);
+}
+
+.signup-user-input input {
+  width: 100%;
+
+  min-width: 0;
+
+  border: none;
+
+  outline: none;
+
+  background: transparent;
+
+  color: var(--text-primary);
+
+  font-family: inherit;
+
+  font-size: 10px;
+}
+
+.signup-user-input input::placeholder {
+  color: var(--text-muted);
+}
+
+.signup-user-input select {
+  width: 100%;
+  height: 100%;
+
+  border: none;
+  outline: none;
+
+  background: transparent;
+  color: var(--text-primary);
+
+  font-family: inherit;
+  font-size: 10px;
+
+  cursor: pointer;
+}
+
+.signup-user-input select option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+/* =====================================================
+   NUMBER INPUT
+===================================================== */
+
+.signup-user-input input[type="number"] {
+  appearance: textfield;
+
+  -moz-appearance: textfield;
+}
+
+.signup-user-input input[type="number"]::-webkit-inner-spin-button,
+.signup-user-input input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+
+  margin: 0;
+}
+
+/* =====================================================
+   PASSWORD EYE
+===================================================== */
+
+.signup-user-eye {
+  width: 28px;
+  height: 28px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border: none;
+
+  background: transparent;
+
+  color: var(--text-muted);
+
+  cursor: pointer;
+}
+
+.signup-user-eye:hover {
+  color: var(--primary);
+}
+
+/* =====================================================
+   TERMS
+===================================================== */
+
+.signup-user-terms {
+  grid-column: 1 / -1;
+
+  display: flex;
+
+  align-items: flex-start;
+
+  gap: 7px;
+
+  color: var(--text-secondary);
+
+  font-size: 9px;
+
+  cursor: pointer;
+}
+
+.signup-user-terms input {
+  width: 13px;
+  height: 13px;
+
+  margin: 0;
+
+  accent-color: var(--primary);
+
+  cursor: pointer;
+}
+
+/* =====================================================
+   SUBMIT
+===================================================== */
+
+.signup-user-submit {
+  grid-column: 1 / -1;
+
+  min-height: 47px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  border: none;
+
+  border-radius: 8px;
+
+  background: var(--primary);
+
+  color: white;
+
+  font-family: inherit;
+
+  font-size: 10px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: var(--transition);
+}
+
+.signup-user-submit:hover {
+  background: var(--primary-hover);
+
+  transform: translateY(-2px);
+
+  box-shadow: var(--shadow-sm);
+}
+
+/* =====================================================
+   LOGIN
+===================================================== */
+
+.signup-user-login {
+  margin-top: 18px;
+
+  color: var(--text-muted);
+
+  text-align: center;
+
+  font-size: 9px;
+}
+
+.signup-user-login a {
+  margin-left: 5px;
+
+  color: var(--primary);
+
+  font-weight: 700;
+
+  text-decoration: none;
+}
+
+.signup-user-login a:hover {
+  text-decoration: underline;
+}
+
+/* =====================================================
+   TABLET
+===================================================== */
+
+@media (max-width: 700px) {
+  .signup-user-page {
+    padding: 35px 20px;
+  }
+
+  .signup-user-container {
+    padding: 35px 30px;
+  }
+
+  .signup-user-heading h1 {
+    font-size: 35px;
+  }
+}
+
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media (max-width: 550px) {
+  .signup-user-page {
+    padding: 25px 15px 35px;
+
+    align-items: flex-start;
+  }
+
+  .signup-user-container {
+    margin-top: 20px;
+
+    padding: 30px 20px;
+
+    border-radius: 14px;
+  }
+
+  .signup-user-theme {
+    top: 15px;
+
+    right: 15px;
+
+    width: 37px;
+    height: 37px;
+  }
+
+  .signup-user-heading h1 {
+    font-size: 31px;
+  }
+
+  .signup-user-form {
+    grid-template-columns: 1fr;
+
+    gap: 12px;
+  }
+
+  .signup-user-account-type,
+  .signup-user-field.full,
+  .signup-user-terms,
+  .signup-user-submit {
+    grid-column: auto;
+  }
+}
+
+/* =====================================================
+   SMALL MOBILE
+===================================================== */
+
+@media (max-width: 400px) {
+  .signup-user-page {
+    padding: 20px 10px 30px;
+  }
+
+  .signup-user-container {
+    padding: 27px 17px;
+  }
+
+  .signup-user-heading h1 {
+    font-size: 28px;
+  }
+
+  .signup-user-type-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,195 @@
+.footer {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+}
+
+.footer-container {
+  width: min(1180px, 92%);
+  margin: 0 auto;
+}
+
+/* =========================
+   FOOTER GRID
+========================= */
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 0.8fr 0.8fr 1.2fr;
+
+  gap: 50px;
+
+  padding: 65px 0 50px;
+}
+
+/* =========================
+   BRAND
+========================= */
+
+.footer-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.footer-logo-icon {
+  width: 43px;
+  height: 43px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 12px;
+
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.footer-logo-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.footer-logo-text span {
+  font-family: "Playfair Display", serif;
+
+  font-size: 19px;
+  font-weight: 700;
+
+  letter-spacing: 1.2px;
+}
+
+.footer-logo-text small {
+  color: var(--text-muted);
+
+  font-size: 9px;
+  letter-spacing: 1px;
+
+  text-transform: uppercase;
+}
+
+.footer-brand p {
+  max-width: 300px;
+
+  margin-top: 18px;
+
+  color: var(--text-secondary);
+
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+/* =========================
+   FOOTER COLUMNS
+========================= */
+
+.footer-column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+  gap: 11px;
+}
+
+.footer-column h4 {
+  margin-bottom: 7px;
+
+  color: var(--text-primary);
+
+  font-size: 12px;
+}
+
+.footer-column a {
+  color: var(--text-secondary);
+
+  font-size: 10px;
+
+  transition: color 0.3s ease;
+}
+
+.footer-column a:hover {
+  color: var(--primary);
+}
+
+/* =========================
+   CONTACT
+========================= */
+
+.footer-contact > div {
+  display: flex;
+  align-items: flex-start;
+
+  gap: 8px;
+
+  color: var(--text-secondary);
+
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.footer-contact svg {
+  flex-shrink: 0;
+
+  margin-top: 1px;
+
+  color: var(--primary);
+}
+
+/* =========================
+   BOTTOM
+========================= */
+
+.footer-bottom {
+  min-height: 60px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  border-top: 1px solid var(--border);
+
+  color: var(--text-muted);
+
+  font-size: 9px;
+}
+
+/* =========================
+   TABLET
+========================= */
+
+@media (max-width: 900px) {
+  .footer-grid {
+    grid-template-columns: repeat(2, 1fr);
+
+    gap: 40px 30px;
+  }
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 600px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+
+    gap: 35px;
+
+    padding: 50px 0 35px;
+  }
+
+  .footer-brand p {
+    max-width: 100%;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    justify-content: center;
+
+    padding: 18px 0;
+
+    text-align: center;
+  }
+}

@@ -1,121 +1,226 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "./assets/vite.svg";
-import heroImg from "./assets/hero.png";
-import "./App.css";
+import { Routes, Route } from "react-router-dom";
+
+/* =====================================================
+   PUBLIC PAGES
+===================================================== */
+
+import Home from "./pages/public/Home/Home";
+import Books from "./pages/public/Books/Books";
+import BookDetails from "./pages/public/BookDetails/BookDetails";
+import About from "./pages/public/About/About";
+import Contact from "./pages/public/Contact/Contact";
+
+/* =====================================================
+   AUTH PAGES
+===================================================== */
+
+import Login from "./pages/auth/Login/Login";
+import Signup from "./pages/auth/Signup/Signup";
+import SignupUser from "./pages/auth/SignupUser/SignupUser";
+import SignupLibrarian from "./pages/auth/SignupLibrarian/SignupLibrarian";
+
+/* =====================================================
+   USER PAGES
+===================================================== */
+
+import Dashboard from "./pages/user/Dashboard/Dashboard";
+import MyBooks from "./pages/user/MyBooks/MyBooks";
+import Wishlist from "./pages/user/Wishlist/Wishlist";
+import Fines from "./pages/user/Fines/Fines";
+import Profile from "./pages/user/Profile/Profile";
+import Settings from "./pages/user/Settings/Settings";
+import Notifications from "./pages/user/Notifications/Notifications";
+
+/* =====================================================
+   LIBRARIAN LAYOUT
+===================================================== */
+
+import LibrarianLayout from "./components/LibrarianLayout/LibrarianLayout";
+
+/* =====================================================
+   LIBRARIAN PAGES
+===================================================== */
+
+import LibrarianDashboard from "./pages/librarian/LibrarianDashboard/LibrarianDashboard";
+import BooksManagement from "./pages/librarian/BooksManagement/BooksManagement";
+import BorrowReturn from "./pages/librarian/BorrowReturn/BorrowReturn";
+import LibrarianFines from "./pages/librarian/Fines/Fines";
+import LibrarianUsers from "./pages/librarian/Users/Users";
+import LibrarianNotifications from "./pages/librarian/Notifications/Notifications";
+import LibrarianSettings from "./pages/librarian/Settings/Settings";
+
+/* =====================================================
+   PROTECTED ROUTE
+===================================================== */
+
+import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
+
+/* =====================================================
+   APP
+===================================================== */
 
 function App() {
-  const [count, setCount] = useState(0);
-
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <Routes>
+      {/* =================================================
+          PUBLIC ROUTES
+      ================================================= */}
 
-      <div className="ticks"></div>
+      <Route path="/" element={<Home />} />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      <Route path="/books" element={<Books />} />
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      {/* BOOK DETAILS */}
+      <Route path="/books/:id" element={<BookDetails />} />
+
+      <Route path="/about" element={<About />} />
+
+      <Route path="/contact" element={<Contact />} />
+
+      {/* =================================================
+          AUTH ROUTES
+      ================================================= */}
+
+      <Route path="/login" element={<Login />} />
+
+      <Route path="/signup" element={<Signup />} />
+
+      <Route path="/signup/user" element={<SignupUser />} />
+
+      <Route path="/signup/librarian" element={<SignupLibrarian />} />
+
+      {/* =================================================
+          USER ROUTES
+      ================================================= */}
+
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute roles={["Student", "Teacher"]}>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/my-books"
+        element={
+          <ProtectedRoute roles={["Student", "Teacher"]}>
+            <MyBooks />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/wishlist"
+        element={
+          <ProtectedRoute roles={["Student", "Teacher"]}>
+            <Wishlist />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/fines"
+        element={
+          <ProtectedRoute roles={["Student", "Teacher"]}>
+            <Fines />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Settings />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute>
+            <Notifications />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* =================================================
+          LIBRARIAN ROUTES
+      ================================================= */}
+
+      <Route
+        path="/librarian"
+        element={
+          <ProtectedRoute roles={["Librarian"]}>
+            <LibrarianLayout />
+          </ProtectedRoute>
+        }
+      >
+        {/* /librarian */}
+        <Route index element={<LibrarianDashboard />} />
+
+        {/* /librarian/dashboard */}
+        <Route path="dashboard" element={<LibrarianDashboard />} />
+
+        {/* /librarian/books */}
+        <Route path="books" element={<BooksManagement />} />
+
+        {/* /librarian/borrow-return */}
+        <Route path="borrow-return" element={<BorrowReturn />} />
+
+        {/* /librarian/fines */}
+        <Route path="fines" element={<LibrarianFines />} />
+
+        {/* /librarian/users */}
+        <Route path="users" element={<LibrarianUsers />} />
+
+        {/* /librarian/notifications */}
+        <Route path="notifications" element={<LibrarianNotifications />} />
+
+        {/* /librarian/settings */}
+        <Route path="settings" element={<LibrarianSettings />} />
+      </Route>
+
+      {/* =================================================
+          404
+      ================================================= */}
+
+      <Route
+        path="*"
+        element={
+          <div
+            style={{
+              minHeight: "100vh",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexDirection: "column",
+              gap: "10px",
+              padding: "20px",
+              textAlign: "center",
+              background: "var(--bg-primary)",
+              color: "var(--text-primary)",
+            }}
+          >
+            <h1>404</h1>
+
+            <p>Page not found.</p>
+          </div>
+        }
+      />
+    </Routes>
   );
 }
 
