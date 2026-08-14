@@ -1,262 +1,171 @@
-const USERS_KEY = "pustakalaya_users";
-const CURRENT_USER_KEY = "pustakalaya_current_user";
+import axios from "axios";
+
+const API_URL = "http://localhost:8083/api/auth";
 
 /* =====================================================
-   GET ALL USERS FROM LOCAL STORAGE
+   USER SIGNUP
 ===================================================== */
 
-const getUsers = () => {
+export async function signupUser(userData) {
   try {
-    const users = localStorage.getItem(USERS_KEY);
+    const response = await axios.post(`${API_URL}/signup/user`, userData, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
 
-    return users ? JSON.parse(users) : [];
+    return response.data;
   } catch (error) {
-    console.error("Unable to read users:", error);
-    return [];
+    console.error("User signup error:", error);
+
+    const message =
+      typeof error.response?.data === "string"
+        ? error.response.data
+        : error.response?.data?.message;
+
+    throw new Error(message || "Unable to create user account.");
   }
-};
+}
 
 /* =====================================================
-   SAVE USERS
+   LIBRARIAN SIGNUP
 ===================================================== */
 
-const saveUsers = (users) => {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-};
+export async function signupLibrarian(librarianData) {
+  try {
+    const response = await axios.post(
+      `${API_URL}/signup/librarian`,
+      librarianData,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    );
 
-/* =====================================================
-   REGISTER USER
-===================================================== */
+    return response.data;
+  } catch (error) {
+    console.error("Librarian signup error:", error);
 
-export const registerUser = (userData) => {
-  const users = getUsers();
+    const message =
+      typeof error.response?.data === "string"
+        ? error.response.data
+        : error.response?.data?.message;
 
-  const email = userData.email?.trim().toLowerCase();
-
-  const existingUser = users.find(
-    (user) => user.email?.toLowerCase() === email,
-  );
-
-  if (existingUser) {
-    return {
-      success: false,
-      message: "An account with this email already exists.",
-    };
+    throw new Error(message || "Unable to create librarian account.");
   }
-
-  const newUser = {
-    id: Date.now().toString(),
-
-    /* BASIC DETAILS */
-    name: userData.name?.trim() || "",
-    email: email || "",
-    age: Number(userData.age) || null,
-    phone: userData.phone?.trim() || "",
-
-    /* ACCOUNT */
-    role: userData.role || "Student",
-
-    /* USER DETAILS */
-    accountType: userData.accountType || null,
-
-    course: userData.course?.trim() || "",
-
-    department: userData.department?.trim() || "",
-
-    semester: userData.semester || "",
-
-    rollNumber: userData.rollNumber?.trim() || "",
-
-    libraryRegistrationNumber: userData.libraryRegistrationNumber?.trim() || "",
-
-    /* TEACHER DETAILS */
-    employeeId: userData.employeeId?.trim() || "",
-
-    /* LIBRARIAN DETAILS */
-    designation: userData.designation?.trim() || "",
-
-    libraryStaffId: userData.libraryStaffId?.trim() || "",
-
-    /* AUTH */
-    password: userData.password || "",
-
-    createdAt: new Date().toISOString(),
-
-    /* USER DATA */
-    wishlist: [],
-    borrowedBooks: [],
-    notifications: [],
-  };
-
-  users.push(newUser);
-
-  saveUsers(users);
-
-  return {
-    success: true,
-    message: "Account created successfully.",
-    user: removePassword(newUser),
-  };
-};
-
-/* =====================================================
-   REMOVE PASSWORD
-===================================================== */
-
-const removePassword = (user) => {
-  const safeUser = { ...user };
-
-  delete safeUser.password;
-
-  return safeUser;
-};
+}
 
 /* =====================================================
    LOGIN
 ===================================================== */
 
-export const loginUser = (email, password) => {
-  const users = getUsers();
+export async function loginUser(credentials) {
+  try {
+    console.log("Login request:", {
+      email: credentials.email,
+    });
 
-  const user = users.find(
-    (item) =>
-      item.email?.toLowerCase() === email.trim().toLowerCase() &&
-      item.password === password,
-  );
+    const response = await axios.post(
+      `${API_URL}/login`,
+      {
+        email: credentials.email,
+        password: credentials.password,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    );
 
-  if (!user) {
-    return {
-      success: false,
-      message: "Invalid email or password.",
-    };
+    console.log("Login successful:", response.data);
+
+    const user = response.data;
+
+    // Store logged-in user
+    localStorage.setItem("pustakalaya_user", JSON.stringify(user));
+
+    return user;
+  } catch (error) {
+    console.error("Login error:", error);
+
+    console.error("Login status:", error.response?.status);
+
+    console.error("Login response:", error.response?.data);
+
+    const message =
+      typeof error.response?.data === "string"
+        ? error.response.data
+        : error.response?.data?.message;
+
+    throw new Error(message || "Invalid email or password.");
   }
-
-  const safeUser = removePassword(user);
-
-  localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(safeUser));
-
-  return {
-    success: true,
-    message: "Login successful.",
-    user: safeUser,
-  };
-};
-
-/* =====================================================
-   LOGOUT
-===================================================== */
-
-export const logoutUser = () => {
-  localStorage.removeItem(CURRENT_USER_KEY);
-};
+}
 
 /* =====================================================
    GET CURRENT USER
 ===================================================== */
 
-export const getCurrentUser = () => {
+export function getCurrentUser() {
   try {
-    const user = localStorage.getItem(CURRENT_USER_KEY);
+    const storedUser = localStorage.getItem("pustakalaya_user");
 
-    return user ? JSON.parse(user) : null;
+    if (!storedUser) {
+      return null;
+    }
+
+    return JSON.parse(storedUser);
   } catch (error) {
     console.error("Unable to read current user:", error);
 
+    localStorage.removeItem("pustakalaya_user");
+
     return null;
   }
-};
+}
 
 /* =====================================================
    CHECK LOGIN
 ===================================================== */
 
-export const isLoggedIn = () => {
-  return Boolean(getCurrentUser());
-};
+export function isLoggedIn() {
+  return getCurrentUser() !== null;
+}
 
 /* =====================================================
-   GET ALL USERS
+   LOGOUT
 ===================================================== */
 
-export const getAllUsers = () => {
-  return getUsers().map(removePassword);
-};
+export function logoutUser() {
+  localStorage.removeItem("pustakalaya_user");
+}
 
 /* =====================================================
-   GET USER BY ID
+   UPDATE PROFILE
 ===================================================== */
 
-export const getUserById = (userId) => {
-  const users = getUsers();
+export async function updateProfile(userId, userData) {
+  try {
+    const response = await axios.put(`${API_URL}/profile/${userId}`, userData, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
 
-  const user = users.find((item) => item.id === userId);
+    const updatedUser = response.data;
 
-  return user ? removePassword(user) : null;
-};
+    localStorage.setItem("pustakalaya_user", JSON.stringify(updatedUser));
 
-/* =====================================================
-   UPDATE USER
-===================================================== */
+    return updatedUser;
+  } catch (error) {
+    console.error("Profile update error:", error);
 
-export const updateUser = (userId, updatedData) => {
-  const users = getUsers();
+    const message =
+      typeof error.response?.data === "string"
+        ? error.response.data
+        : error.response?.data?.message;
 
-  const index = users.findIndex((user) => user.id === userId);
-
-  if (index === -1) {
-    return {
-      success: false,
-      message: "User not found.",
-    };
+    throw new Error(message || "Unable to update profile.");
   }
-
-  const updatedUser = {
-    ...users[index],
-    ...updatedData,
-    id: users[index].id,
-    email: users[index].email,
-  };
-
-  users[index] = updatedUser;
-
-  saveUsers(users);
-
-  const safeUser = removePassword(updatedUser);
-
-  /* Update currently logged-in user */
-  const currentUser = getCurrentUser();
-
-  if (currentUser && currentUser.id === userId) {
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(safeUser));
-  }
-
-  return {
-    success: true,
-    message: "Profile updated successfully.",
-    user: safeUser,
-  };
-};
-
-/* =====================================================
-   DELETE USER
-===================================================== */
-
-export const deleteUser = (userId) => {
-  const users = getUsers();
-
-  const filteredUsers = users.filter((user) => user.id !== userId);
-
-  if (filteredUsers.length === users.length) {
-    return {
-      success: false,
-      message: "User not found.",
-    };
-  }
-
-  saveUsers(filteredUsers);
-
-  return {
-    success: true,
-    message: "User deleted successfully.",
-  };
-};
+}

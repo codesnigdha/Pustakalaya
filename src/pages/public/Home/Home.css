@@ -154,7 +154,7 @@
 
 .home-search {
   width: min(610px, 100%);
-  height: 62px;
+  height: 52px;
   display: flex;
   align-items: center;
   gap: 13px;
@@ -185,7 +185,7 @@
 }
 
 .home-search button {
-  height: 48px;
+  height: 36px;
   padding: 0 22px;
   border: none;
   border-radius: 8px;
@@ -201,9 +201,10 @@
 }
 
 .home-hero-actions {
+  margin-left: 10px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 40px;
   margin-top: 40px;
 }
 

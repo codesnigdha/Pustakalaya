@@ -70,7 +70,6 @@ function App() {
 
       <Route path="/books" element={<Books />} />
 
-      {/* BOOK DETAILS */}
       <Route path="/books/:id" element={<BookDetails />} />
 
       <Route path="/about" element={<About />} />
@@ -96,7 +95,7 @@ function App() {
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute roles={["Student", "Teacher"]}>
+          <ProtectedRoute roles={["STUDENT", "TEACHER"]}>
             <Dashboard />
           </ProtectedRoute>
         }
@@ -105,7 +104,7 @@ function App() {
       <Route
         path="/my-books"
         element={
-          <ProtectedRoute roles={["Student", "Teacher"]}>
+          <ProtectedRoute roles={["STUDENT", "TEACHER"]}>
             <MyBooks />
           </ProtectedRoute>
         }
@@ -114,7 +113,7 @@ function App() {
       <Route
         path="/wishlist"
         element={
-          <ProtectedRoute roles={["Student", "Teacher"]}>
+          <ProtectedRoute roles={["STUDENT", "TEACHER"]}>
             <Wishlist />
           </ProtectedRoute>
         }
@@ -123,7 +122,7 @@ function App() {
       <Route
         path="/fines"
         element={
-          <ProtectedRoute roles={["Student", "Teacher"]}>
+          <ProtectedRoute roles={["STUDENT", "TEACHER"]}>
             <Fines />
           </ProtectedRoute>
         }
@@ -163,7 +162,7 @@ function App() {
       <Route
         path="/librarian"
         element={
-          <ProtectedRoute roles={["Librarian"]}>
+          <ProtectedRoute roles={["LIBRARIAN"]}>
             <LibrarianLayout />
           </ProtectedRoute>
         }

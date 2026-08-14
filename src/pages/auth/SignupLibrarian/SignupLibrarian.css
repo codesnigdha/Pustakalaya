@@ -6,14 +6,12 @@
   min-height: 100vh;
 
   display: flex;
-
   align-items: center;
   justify-content: center;
 
   padding: 50px 25px;
 
   background: var(--bg-primary);
-
   color: var(--text-primary);
 }
 
@@ -33,16 +31,13 @@
   height: 40px;
 
   display: flex;
-
   align-items: center;
   justify-content: center;
 
   border: 1px solid var(--border);
-
   border-radius: 50%;
 
   background: var(--bg-secondary);
-
   color: var(--text-primary);
 
   font-size: 18px;
@@ -219,7 +214,7 @@
 }
 
 /* =====================================================
-   INPUT
+   INPUT WRAPPER
 ===================================================== */
 
 .signup-librarian-input {
@@ -248,11 +243,19 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
+/* =====================================================
+   INPUT ICON
+===================================================== */
+
 .signup-librarian-input > svg {
   flex-shrink: 0;
 
   color: var(--text-muted);
 }
+
+/* =====================================================
+   TEXT INPUT
+===================================================== */
 
 .signup-librarian-input input {
   width: 100%;
@@ -277,20 +280,93 @@
 }
 
 /* =====================================================
-   NUMBER INPUT
+   SELECT / DESIGNATION
 ===================================================== */
 
-.signup-librarian-input input[type="number"] {
-  appearance: textfield;
+.signup-librarian-input select {
+  width: 100%;
 
-  -moz-appearance: textfield;
+  min-width: 0;
+
+  height: 100%;
+
+  border: none;
+
+  outline: none;
+
+  background: transparent;
+
+  color: var(--text-primary);
+
+  font-family: inherit;
+
+  font-size: 10px;
+
+  cursor: pointer;
+
+  appearance: none;
 }
 
-.signup-librarian-input input[type="number"]::-webkit-inner-spin-button,
-.signup-librarian-input input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
+/* Placeholder option */
 
-  margin: 0;
+.signup-librarian-input select:invalid {
+  color: var(--text-muted);
+}
+
+/* Dropdown options */
+
+.signup-librarian-input select option {
+  background: var(--bg-secondary);
+
+  color: var(--text-primary);
+
+  font-size: 10px;
+
+  padding: 10px;
+}
+
+/* =====================================================
+   CUSTOM DROPDOWN ARROW
+===================================================== */
+
+.signup-librarian-field:has(select) {
+  position: relative;
+}
+
+.signup-librarian-field:has(select) .signup-librarian-input {
+  position: relative;
+
+  padding-right: 35px;
+}
+
+.signup-librarian-field:has(select) .signup-librarian-input::after {
+  content: "⌄";
+
+  position: absolute;
+
+  right: 12px;
+  top: 50%;
+
+  transform: translateY(-55%);
+
+  color: var(--text-muted);
+
+  font-size: 15px;
+
+  pointer-events: none;
+}
+
+.signup-librarian-field:has(select)
+  .signup-librarian-input:focus-within::after {
+  color: var(--primary);
+}
+
+/* =====================================================
+   PHONE INPUT
+===================================================== */
+
+.signup-librarian-input input[type="tel"] {
+  letter-spacing: 0.3px;
 }
 
 /* =====================================================
@@ -315,6 +391,8 @@
   color: var(--text-muted);
 
   cursor: pointer;
+
+  transition: var(--transition);
 }
 
 .signup-librarian-eye:hover {
@@ -393,6 +471,16 @@
   transform: translateY(-2px);
 
   box-shadow: var(--shadow-sm);
+}
+
+.signup-librarian-submit:disabled {
+  opacity: 0.65;
+
+  cursor: not-allowed;
+
+  transform: none;
+
+  box-shadow: none;
 }
 
 /* =====================================================

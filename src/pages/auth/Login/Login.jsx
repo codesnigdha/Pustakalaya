@@ -40,9 +40,9 @@ function Login() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  /* =========================
+  /* =====================================================
      HANDLE INPUT
-  ========================= */
+  ===================================================== */
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -56,77 +56,158 @@ function Login() {
     setSuccess("");
   };
 
-  /* =========================
+  /* =====================================================
      HANDLE LOGIN
-  ========================= */
+  ===================================================== */
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     setError("");
     setSuccess("");
 
-    /* Email validation */
+    /* =================================================
+       GET FORM VALUES
+    ================================================= */
 
-    if (!formData.email.trim()) {
+    const email = formData.email.trim();
+    const password = formData.password;
+
+    /* =================================================
+       EMAIL VALIDATION
+    ================================================= */
+
+    if (!email) {
       setError("Please enter your email.");
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError("Please enter a valid email address.");
       return;
     }
 
-    /* Password validation */
+    /* =================================================
+       PASSWORD VALIDATION
+    ================================================= */
 
-    if (!formData.password) {
+    if (!password) {
       setError("Please enter your password.");
       return;
     }
 
     setIsSubmitting(true);
 
-    /* Login using LocalStorage */
+    /* =================================================
+       LOGIN
+    ================================================= */
 
-    const result = loginUser(formData.email, formData.password);
+    try {
+      /*
+       * loginUser expects ONE object:
+       *
+       * {
+       *   email: "...",
+       *   password: "..."
+       * }
+       */
 
-    if (!result.success) {
-      setError(result.message);
-      setIsSubmitting(false);
-      return;
-    }
-
-    /*
-      IMPORTANT:
-      Update AuthContext immediately.
-    */
-
-    login(result.user);
-
-    setSuccess("Login successful. Redirecting...");
-
-    /*
-      Redirect after a short delay
-      so the success message can be seen.
-    */
-
-    setTimeout(() => {
-      const from = location.state?.from || "/dashboard";
-
-      navigate(from, {
-        replace: true,
+      const user = await loginUser({
+        email: email,
+        password: password,
       });
-    }, 700);
+
+      console.log("Login successful:", user);
+
+      /* =================================================
+         UPDATE AUTH CONTEXT
+      ================================================= */
+
+      login(user);
+
+      setSuccess("Login successful. Redirecting...");
+
+      /* =================================================
+         ROLE-BASED REDIRECT
+      ================================================= */
+
+      setTimeout(() => {
+        /*
+         * If ProtectedRoute originally sent the user
+         * to login, return them to that page.
+         */
+        const from = location.state?.from;
+
+        if (from) {
+          navigate(from, {
+            replace: true,
+          });
+
+          return;
+        }
+
+        /*
+         * LIBRARIAN
+         */
+        if (user.role === "LIBRARIAN") {
+          navigate("/librarian/dashboard", {
+            replace: true,
+          });
+
+          return;
+        }
+
+        /*
+         * STUDENT
+         */
+        if (user.role === "STUDENT") {
+          navigate("/dashboard", {
+            replace: true,
+          });
+
+          return;
+        }
+
+        /*
+         * TEACHER
+         */
+        if (user.role === "TEACHER") {
+          navigate("/dashboard", {
+            replace: true,
+          });
+
+          return;
+        }
+
+        /*
+         * Unknown role
+         */
+        console.error("Unknown user role:", user.role);
+
+        navigate("/", {
+          replace: true,
+        });
+      }, 700);
+    } catch (error) {
+      console.error("Login error:", error);
+
+      setError(error.message || "Invalid email or password.");
+
+      setIsSubmitting(false);
+    }
   };
 
-  /* =========================
+  /* =====================================================
      FORGOT PASSWORD
-  ========================= */
+  ===================================================== */
 
   const handleForgotPassword = () => {
     alert("Password recovery will be added later.");
   };
+
+  /* =====================================================
+     UI
+  ===================================================== */
 
   return (
     <div className="login-page">
@@ -288,6 +369,7 @@ function Login() {
                   type="button"
                   className="login-forgot"
                   onClick={handleForgotPassword}
+                  disabled={isSubmitting}
                 >
                   Forgot Password?
                 </button>
@@ -312,6 +394,7 @@ function Login() {
                   className="login-password-toggle"
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
+                  disabled={isSubmitting}
                 >
                   {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                 </button>
