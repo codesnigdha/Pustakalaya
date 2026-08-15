@@ -1,6 +1,10 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:8080/api/borrow";
+/* =====================================================
+   API CONFIGURATION
+===================================================== */
+
+const API_URL = "http://localhost:8083/api/borrow";
 
 /* =====================================================
    BORROW BOOK
@@ -15,7 +19,13 @@ export async function borrowBook(userId, bookId) {
 
     return response.data;
   } catch (error) {
-    throw new Error(error.response?.data?.message || "Unable to borrow book.");
+    console.error("Borrow book error:", error);
+
+    throw new Error(
+      error.response?.data?.message ||
+        error.response?.data ||
+        "Unable to borrow book.",
+    );
   }
 }
 
@@ -29,7 +39,13 @@ export async function returnBook(borrowId) {
 
     return response.data;
   } catch (error) {
-    throw new Error(error.response?.data?.message || "Unable to return book.");
+    console.error("Return book error:", error);
+
+    throw new Error(
+      error.response?.data?.message ||
+        error.response?.data ||
+        "Unable to return book.",
+    );
   }
 }
 
@@ -43,14 +59,21 @@ export async function getUserBorrowedBooks(userId) {
 
     return response.data;
   } catch (error) {
+    console.error("Get user borrowed books error:", error);
+
     throw new Error(
-      error.response?.data?.message || "Unable to load borrowed books.",
+      error.response?.data?.message ||
+        error.response?.data ||
+        "Unable to load borrowed books.",
     );
   }
 }
 
 /* =====================================================
    GET ACTIVE BORROWS
+   Used by:
+   - Librarian
+   - Borrow management
 ===================================================== */
 
 export async function getActiveBorrows() {
@@ -59,8 +82,12 @@ export async function getActiveBorrows() {
 
     return response.data;
   } catch (error) {
+    console.error("Get active borrows error:", error);
+
     throw new Error(
-      error.response?.data?.message || "Unable to load active borrow records.",
+      error.response?.data?.message ||
+        error.response?.data ||
+        "Unable to load active borrow records.",
     );
   }
 }
@@ -75,8 +102,12 @@ export async function getBorrowHistory(userId) {
 
     return response.data;
   } catch (error) {
+    console.error("Get borrow history error:", error);
+
     throw new Error(
-      error.response?.data?.message || "Unable to load borrow history.",
+      error.response?.data?.message ||
+        error.response?.data ||
+        "Unable to load borrow history.",
     );
   }
 }

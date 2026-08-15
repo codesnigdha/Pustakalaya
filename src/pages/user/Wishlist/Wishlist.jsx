@@ -5,9 +5,11 @@ import {
   Filter,
   Trash2,
   Eye,
-  Plus,
+  BookMarked,
   CheckCircle2,
   XCircle,
+  Bell,
+  BellRing,
 } from "lucide-react";
 
 import { useEffect, useMemo, useState } from "react";
@@ -25,68 +27,37 @@ function Wishlist() {
 
   const [filter, setFilter] = useState("all");
 
+  const [notifiedBooks, setNotifiedBooks] = useState([]);
+
   /* =====================================================
      LOAD WISHLIST
   ===================================================== */
 
   useEffect(() => {
-    const storedWishlist = JSON.parse(
-      localStorage.getItem("pustakalaya_wishlist"),
-    );
+    try {
+      const storedWishlist =
+        JSON.parse(localStorage.getItem("pustakalaya_wishlist")) || [];
 
-    if (storedWishlist) {
-      setWishlist(storedWishlist);
-      return;
+      const storedNotifications =
+        JSON.parse(
+          localStorage.getItem("pustakalaya_availability_notifications"),
+        ) || [];
+
+      setWishlist(Array.isArray(storedWishlist) ? storedWishlist : []);
+
+      setNotifiedBooks(
+        Array.isArray(storedNotifications) ? storedNotifications : [],
+      );
+    } catch (error) {
+      console.error("Unable to load wishlist:", error);
+
+      setWishlist([]);
+      setNotifiedBooks([]);
     }
-
-    /* Demo data */
-
-    const demoWishlist = [
-      {
-        id: 1,
-        title: "Clean Code",
-        author: "Robert C. Martin",
-        category: "Programming",
-        isbn: "9780132350884",
-        available: true,
-        addedDate: "2026-08-05",
-      },
-      {
-        id: 2,
-        title: "The Pragmatic Programmer",
-        author: "Andrew Hunt",
-        category: "Programming",
-        isbn: "9780135957059",
-        available: false,
-        addedDate: "2026-08-07",
-      },
-      {
-        id: 3,
-        title: "Artificial Intelligence",
-        author: "Stuart Russell",
-        category: "Artificial Intelligence",
-        isbn: "9780134610993",
-        available: true,
-        addedDate: "2026-08-10",
-      },
-      {
-        id: 4,
-        title: "Computer Organization",
-        author: "Carl Hamacher",
-        category: "Computer Science",
-        isbn: "9780071247806",
-        available: true,
-        addedDate: "2026-08-11",
-      },
-    ];
-
-    localStorage.setItem("pustakalaya_wishlist", JSON.stringify(demoWishlist));
-
-    setWishlist(demoWishlist);
   }, []);
 
   /* =====================================================
-     UPDATE LOCAL STORAGE
+     UPDATE WISHLIST
   ===================================================== */
 
   const updateWishlist = (updatedWishlist) => {
@@ -99,7 +70,27 @@ function Wishlist() {
   };
 
   /* =====================================================
-     REMOVE BOOK
+     GET AVAILABILITY
+  ===================================================== */
+
+  const isBookAvailable = (book) => {
+    if (typeof book.available === "boolean") {
+      return book.available;
+    }
+
+    if (typeof book.availableCopies !== "undefined") {
+      return Number(book.availableCopies) > 0;
+    }
+
+    if (typeof book.quantity !== "undefined") {
+      return Number(book.quantity) > 0;
+    }
+
+    return false;
+  };
+
+  /* =====================================================
+     REMOVE FROM WISHLIST
   ===================================================== */
 
   const removeBook = (id) => {
@@ -109,19 +100,21 @@ function Wishlist() {
   };
 
   /* =====================================================
-     ADD TO MY BOOKS
+     BORROW BOOK
   ===================================================== */
 
-  const addToMyBooks = (book) => {
+  const borrowBook = (book) => {
     const storedBooks =
       JSON.parse(localStorage.getItem("pustakalaya_my_books")) || [];
 
     const alreadyBorrowed = storedBooks.some(
-      (item) => item.title === book.title && item.status === "borrowed",
+      (item) =>
+        String(item.bookId) === String(book.id) && item.status === "borrowed",
     );
 
     if (alreadyBorrowed) {
       alert("This book is already in your borrowed books.");
+
       return;
     }
 
@@ -134,11 +127,17 @@ function Wishlist() {
     const newBook = {
       id: Date.now(),
 
+      bookId: book.id,
+
       title: book.title,
 
       author: book.author,
 
       category: book.category,
+
+      isbn: book.isbn || "",
+
+      cover: book.cover || book.coverUrl || "",
 
       borrowDate: today.toISOString().split("T")[0],
 
@@ -154,32 +153,59 @@ function Wishlist() {
       JSON.stringify([...storedBooks, newBook]),
     );
 
-    /*
-     * Remove from wishlist after borrowing.
-     */
+    /* Remove after borrowing */
 
     const updatedWishlist = wishlist.filter((item) => item.id !== book.id);
 
     updateWishlist(updatedWishlist);
 
-    alert(`${book.title} has been added to My Books.`);
+    alert(`"${book.title}" has been added to My Books.`);
   };
 
   /* =====================================================
-     FILTER
+     NOTIFY IF AVAILABLE
+  ===================================================== */
+
+  const notifyIfAvailable = (book) => {
+    const alreadyNotified = notifiedBooks.includes(book.id);
+
+    if (alreadyNotified) {
+      return;
+    }
+
+    const updatedNotifications = [...notifiedBooks, book.id];
+
+    setNotifiedBooks(updatedNotifications);
+
+    localStorage.setItem(
+      "pustakalaya_availability_notifications",
+      JSON.stringify(updatedNotifications),
+    );
+
+    alert(`You will be notified when "${book.title}" becomes available.`);
+  };
+
+  /* =====================================================
+     SEARCH + FILTER
   ===================================================== */
 
   const filteredWishlist = useMemo(() => {
     return wishlist.filter((book) => {
-      const searchText =
-        `${book.title} ${book.author} ${book.category}`.toLowerCase();
+      const searchText = `
+            ${book.title || ""}
+            ${book.author || ""}
+            ${book.category || ""}
+            ${book.isbn || ""}
+          `.toLowerCase();
 
-      const matchesSearch = searchText.includes(search.toLowerCase());
+      const matchesSearch = searchText.includes(search.toLowerCase().trim());
+
+      const available = isBookAvailable(book);
 
       const matchesFilter =
         filter === "all" ||
-        (filter === "available" && book.available) ||
-        (filter === "unavailable" && !book.available);
+        (filter === "available" && available) ||
+        (filter === "unavailable" && !available);
 
       return matchesSearch && matchesFilter;
     });
@@ -189,22 +215,42 @@ function Wishlist() {
      COUNTS
   ===================================================== */
 
-  const availableCount = wishlist.filter((book) => book.available).length;
+  const availableCount = wishlist.filter((book) =>
+    isBookAvailable(book),
+  ).length;
 
-  const unavailableCount = wishlist.filter((book) => !book.available).length;
+  const unavailableCount = wishlist.filter(
+    (book) => !isBookAvailable(book),
+  ).length;
 
   /* =====================================================
      FORMAT DATE
   ===================================================== */
 
   const formatDate = (date) => {
-    if (!date) return "—";
+    if (!date) {
+      return "—";
+    }
 
-    return new Date(date).toLocaleDateString("en-IN", {
+    const parsedDate = new Date(date);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      return "—";
+    }
+
+    return parsedDate.toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
       year: "numeric",
     });
+  };
+
+  /* =====================================================
+     COVER
+  ===================================================== */
+
+  const getCover = (book) => {
+    return book.cover || book.coverUrl || book.image || "";
   };
 
   return (
@@ -309,7 +355,7 @@ function Wishlist() {
           </section>
 
           {/* =================================================
-              WISHLIST LIST
+              LIST
           ================================================= */}
 
           <section className="wishlist-list">
@@ -321,98 +367,169 @@ function Wishlist() {
               </div>
 
               <span className="wishlist-count">
-                {filteredWishlist.length} books
+                {filteredWishlist.length}{" "}
+                {filteredWishlist.length === 1 ? "book" : "books"}
               </span>
             </div>
+
+            {/* =================================================
+                EMPTY
+            ================================================= */}
 
             {filteredWishlist.length === 0 ? (
               <div className="wishlist-empty">
                 <Heart size={32} />
 
-                <h3>Your wishlist is empty</h3>
+                <h3>
+                  {wishlist.length === 0
+                    ? "Your wishlist is empty"
+                    : "No books found"}
+                </h3>
 
-                <p>Browse the library and save books you want to read later.</p>
+                <p>
+                  {wishlist.length === 0
+                    ? "Browse the library and save books you want to read later."
+                    : "Try changing your search or availability filter."}
+                </p>
 
-                <Link to="/books" className="wishlist-browse-btn">
-                  <BookOpen size={15} />
-                  Browse Books
-                </Link>
+                {wishlist.length === 0 ? (
+                  <Link to="/books" className="wishlist-browse-btn">
+                    <BookOpen size={15} />
+                    Browse Books
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    className="wishlist-browse-btn"
+                    onClick={() => {
+                      setSearch("");
+                      setFilter("all");
+                    }}
+                  >
+                    Show All Books
+                  </button>
+                )}
               </div>
             ) : (
+              /* =================================================
+                 GRID
+              ================================================= */
+
               <div className="wishlist-grid">
-                {filteredWishlist.map((book) => (
-                  <article className="wishlist-card" key={book.id}>
-                    {/* Book Cover */}
+                {filteredWishlist.map((book) => {
+                  const available = isBookAvailable(book);
 
-                    <div className="wishlist-cover">
-                      <BookOpen size={28} />
+                  const cover = getCover(book);
 
-                      <span>PUSTAKALAYA</span>
+                  const hasNotification = notifiedBooks.includes(book.id);
 
-                      <button
-                        type="button"
-                        className="wishlist-remove"
-                        onClick={() => removeBook(book.id)}
-                        title="Remove from wishlist"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+                  return (
+                    <article className="wishlist-card" key={book.id}>
+                      {/* COVER */}
 
-                    {/* Content */}
-
-                    <div className="wishlist-card-content">
-                      <div className="wishlist-card-top">
-                        <span>{book.category}</span>
-
-                        {book.available ? (
-                          <span className="wishlist-available-badge">
-                            <CheckCircle2 size={11} />
-                            Available
-                          </span>
+                      <div className="wishlist-cover">
+                        {cover ? (
+                          <img src={cover} alt={book.title} />
                         ) : (
-                          <span className="wishlist-unavailable-badge">
-                            <XCircle size={11} />
-                            Not Available
-                          </span>
+                          <>
+                            <BookOpen size={28} />
+
+                            <span>PUSTAKALAYA</span>
+                          </>
                         )}
-                      </div>
 
-                      <h3>{book.title}</h3>
+                        {/* REMOVE */}
 
-                      <p className="wishlist-author">{book.author}</p>
-
-                      <div className="wishlist-isbn">ISBN: {book.isbn}</div>
-
-                      <div className="wishlist-added">
-                        Added on {formatDate(book.addedDate)}
-                      </div>
-
-                      {/* Actions */}
-
-                      <div className="wishlist-actions">
-                        <Link
-                          to={`/books/${book.id}`}
-                          className="wishlist-view-btn"
+                        <button
+                          type="button"
+                          className="wishlist-remove"
+                          onClick={() => removeBook(book.id)}
+                          title="Remove from wishlist"
                         >
-                          <Eye size={14} />
-                          View
-                        </Link>
-
-                        {book.available && (
-                          <button
-                            type="button"
-                            className="wishlist-borrow-btn"
-                            onClick={() => addToMyBooks(book)}
-                          >
-                            <Plus size={14} />
-                            Borrow
-                          </button>
-                        )}
+                          <Trash2 size={14} />
+                        </button>
                       </div>
-                    </div>
-                  </article>
-                ))}
+
+                      {/* CONTENT */}
+
+                      <div className="wishlist-card-content">
+                        <div className="wishlist-card-top">
+                          <span>{book.category || "Other"}</span>
+
+                          {available ? (
+                            <span className="wishlist-available-badge">
+                              <CheckCircle2 size={11} />
+                              Available
+                            </span>
+                          ) : (
+                            <span className="wishlist-unavailable-badge">
+                              <XCircle size={11} />
+                              Not Available
+                            </span>
+                          )}
+                        </div>
+
+                        <h3>{book.title}</h3>
+
+                        <p className="wishlist-author">
+                          {book.author || "Unknown Author"}
+                        </p>
+
+                        {book.isbn && (
+                          <div className="wishlist-isbn">ISBN: {book.isbn}</div>
+                        )}
+
+                        {book.addedDate && (
+                          <div className="wishlist-added">
+                            Added on {formatDate(book.addedDate)}
+                          </div>
+                        )}
+
+                        {/* ACTIONS */}
+
+                        <div className="wishlist-actions">
+                          <Link
+                            to={`/books/${book.id}`}
+                            className="wishlist-view-btn"
+                          >
+                            <Eye size={14} />
+                            View
+                          </Link>
+
+                          {available ? (
+                            <button
+                              type="button"
+                              className="wishlist-borrow-btn"
+                              onClick={() => borrowBook(book)}
+                            >
+                              <BookMarked size={14} />
+                              Borrow
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className={`wishlist-notify-btn ${
+                                hasNotification ? "active" : ""
+                              }`}
+                              onClick={() => notifyIfAvailable(book)}
+                              disabled={hasNotification}
+                            >
+                              {hasNotification ? (
+                                <BellRing size={14} />
+                              ) : (
+                                <Bell size={14} />
+                              )}
+
+                              {hasNotification
+                                ? "Notification Set"
+                                : "Notify Me"}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             )}
           </section>

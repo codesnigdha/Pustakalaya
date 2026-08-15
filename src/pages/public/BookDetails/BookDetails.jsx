@@ -7,120 +7,327 @@ import {
   Heart,
   Hash,
   Library,
-  MapPin,
+  LoaderCircle,
   Star,
   Users,
+  X,
   XCircle,
 } from "lucide-react";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import Navbar from "../../../components/Navbar/Navbar";
 import Footer from "../../../components/Footer/Footer";
 
+import { getBookById } from "../../../services/bookService";
+
+import { borrowBook } from "../../../services/borrowService";
+
 import "./BookDetails.css";
 
-const books = [
-  {
-    id: 1,
-    title: "Clean Code",
-    author: "Robert C. Martin",
-    category: "Programming",
-    isbn: "9780132350884",
-    year: 2008,
-    rating: 4.8,
-    totalCopies: 5,
-    availableCopies: 3,
-    publisher: "Prentice Hall",
-    language: "English",
-    pages: 464,
-    cover:
-      "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=700&q=80",
-    description:
-      "Clean Code is a practical guide to writing readable, maintainable and professional software. It presents principles, patterns and techniques that help developers produce better code.",
-  },
-  {
-    id: 2,
-    title: "Database System Concepts",
-    author: "Abraham Silberschatz",
-    category: "Database",
-    isbn: "9780078022159",
-    year: 2019,
-    rating: 4.7,
-    totalCopies: 4,
-    availableCopies: 0,
-    publisher: "McGraw-Hill",
-    language: "English",
-    pages: 1376,
-    cover:
-      "https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=700&q=80",
-    description:
-      "A comprehensive introduction to database systems covering database design, relational databases, SQL, transactions, storage and modern database technologies.",
-  },
-  {
-    id: 3,
-    title: "Computer Networks",
-    author: "Andrew S. Tanenbaum",
-    category: "Networking",
-    isbn: "9780132126953",
-    year: 2011,
-    rating: 4.6,
-    totalCopies: 6,
-    availableCopies: 2,
-    publisher: "Pearson",
-    language: "English",
-    pages: 960,
-    cover:
-      "https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=700&q=80",
-    description:
-      "An extensive introduction to computer networking concepts, protocols, architectures and network technologies.",
-  },
-  {
-    id: 4,
-    title: "The Pragmatic Programmer",
-    author: "David Thomas",
-    category: "Programming",
-    isbn: "9780135957059",
-    year: 2019,
-    rating: 4.9,
-    totalCopies: 5,
-    availableCopies: 4,
-    publisher: "Addison-Wesley",
-    language: "English",
-    pages: 352,
-    cover:
-      "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=700&q=80",
-    description:
-      "A collection of practical programming advice covering software development, debugging, testing, architecture and professional development.",
-  },
-];
+const WISHLIST_KEY = "pustakalaya_wishlist";
+
+const USER_KEY = "pustakalaya_user";
+
+const DEFAULT_COVER =
+  "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=700&q=80";
+
+/* =========================
+   WISHLIST
+========================= */
+
+function getWishlistIds() {
+  try {
+    const stored = localStorage.getItem(WISHLIST_KEY);
+
+    if (!stored) {
+      return [];
+    }
+
+    const parsed = JSON.parse(stored);
+
+    return Array.isArray(parsed) ? parsed.map(Number) : [];
+  } catch {
+    return [];
+  }
+}
+
+/* =========================
+   USER
+========================= */
+
+function getCurrentUser() {
+  try {
+    const stored = localStorage.getItem(USER_KEY);
+
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
+  }
+}
+
+/* =========================
+   CATEGORY
+========================= */
+
+function getCategoryName(book) {
+  if (!book) {
+    return "General";
+  }
+
+  if (book.category && typeof book.category === "object") {
+    return book.category.name || "General";
+  }
+
+  return String(book.category || "General");
+}
+
+/* =========================
+   COVER
+========================= */
+
+function getCoverImage(book) {
+  return book?.coverImage || DEFAULT_COVER;
+}
+
+/* =========================
+   ERROR
+========================= */
+
+function getApiError(error, fallback) {
+  const data = error?.response?.data;
+
+  if (typeof data === "string" && data.trim()) {
+    return data;
+  }
+
+  if (data?.message) {
+    return data.message;
+  }
+
+  if (data?.error) {
+    return data.error;
+  }
+
+  return error?.message || fallback;
+}
+
+/* =========================
+   COMPONENT
+========================= */
 
 function BookDetails() {
   const { id } = useParams();
+
   const navigate = useNavigate();
 
-  const [wishlist, setWishlist] = useState(false);
-  const [showLoginMessage, setShowLoginMessage] = useState(false);
+  const [book, setBook] = useState(null);
 
-  const book = books.find((item) => item.id === Number(id));
+  const [loading, setLoading] = useState(true);
 
-  if (!book) {
+  const [pageError, setPageError] = useState("");
+
+  const [wishlist, setWishlist] = useState(() =>
+    getWishlistIds().includes(Number(id)),
+  );
+
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const [actionMessage, setActionMessage] = useState("");
+
+  const [actionError, setActionError] = useState("");
+
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
+  /* =========================
+     LOAD BOOK
+  ========================= */
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadBook() {
+      try {
+        setLoading(true);
+        setPageError("");
+        setActionMessage("");
+        setActionError("");
+
+        const data = await getBookById(id);
+
+        if (mounted) {
+          setBook(data);
+
+          setWishlist(getWishlistIds().includes(Number(id)));
+        }
+      } catch (error) {
+        console.error("Book details error:", error);
+
+        if (mounted) {
+          setPageError(getApiError(error, "Unable to load book details."));
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    if (id) {
+      loadBook();
+    } else {
+      setPageError("Invalid book ID.");
+
+      setLoading(false);
+    }
+
+    return () => {
+      mounted = false;
+    };
+  }, [id]);
+
+  /* =========================
+     BOOK DATA
+  ========================= */
+
+  const availableCopies = Number(book?.availableCopies ?? 0);
+
+  const totalCopies = Number(book?.totalCopies ?? 0);
+
+  const isAvailable = availableCopies > 0;
+
+  const categoryName = getCategoryName(book);
+
+  const coverImage = getCoverImage(book);
+
+  const publicationYear = book?.publicationYear ?? "—";
+
+  /* =========================
+     WISHLIST
+  ========================= */
+
+  const toggleWishlist = () => {
+    const bookId = Number(id);
+
+    const currentIds = getWishlistIds();
+
+    const nextIds = currentIds.includes(bookId)
+      ? currentIds.filter((item) => item !== bookId)
+      : [...currentIds, bookId];
+
+    localStorage.setItem(WISHLIST_KEY, JSON.stringify(nextIds));
+
+    setWishlist(nextIds.includes(bookId));
+  };
+
+  /* =========================
+     USER ID
+  ========================= */
+
+  const getUserId = () => {
+    const user = getCurrentUser();
+
+    return user?.id ?? user?.userId ?? null;
+  };
+
+  /* =========================
+     BORROW
+  ========================= */
+
+  const handleBorrow = async () => {
+    const user = getCurrentUser();
+
+    if (!user) {
+      setShowLoginModal(true);
+
+      return;
+    }
+
+    const userId = getUserId();
+
+    if (!userId) {
+      setActionError("Unable to identify your account. Please log in again.");
+
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+
+      setActionMessage("");
+
+      setActionError("");
+
+      const response = await borrowBook(Number(id), userId);
+
+      setActionMessage(response?.message || "Book borrowed successfully.");
+
+      setBook((previous) => {
+        if (!previous) {
+          return previous;
+        }
+
+        const current = Number(previous.availableCopies ?? 0);
+
+        return {
+          ...previous,
+
+          availableCopies: Math.max(current - 1, 0),
+        };
+      });
+    } catch (error) {
+      console.error("Borrow book error:", error);
+
+      setActionError(getApiError(error, "Unable to borrow this book."));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  /* =========================
+     LOADING
+  ========================= */
+
+  if (loading) {
     return (
       <div className="book-details-page">
         <Navbar />
 
-        <main className="book-not-found">
-          <div className="book-not-found-icon">
-            <BookOpen size={40} />
+        <main className="book-details-state">
+          <LoaderCircle size={40} className="book-details-spinner" />
+
+          <h1>Loading Book...</h1>
+
+          <p>Getting the latest book information.</p>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
+
+  /* =========================
+     ERROR
+  ========================= */
+
+  if (pageError || !book) {
+    return (
+      <div className="book-details-page">
+        <Navbar />
+
+        <main className="book-details-state">
+          <div className="book-state-icon">
+            <BookOpen size={38} />
           </div>
 
           <h1>Book Not Found</h1>
 
-          <p>The book you're looking for doesn't exist in our catalogue.</p>
+          <p>{pageError || "The requested book could not be found."}</p>
 
-          <Link to="/books">
-            <ArrowLeft size={17} />
+          <Link to="/books" className="book-back-button">
+            <ArrowLeft size={16} />
             Back to Books
           </Link>
         </main>
@@ -130,17 +337,15 @@ function BookDetails() {
     );
   }
 
-  const isAvailable = book.availableCopies > 0;
-
-  const handleProtectedAction = () => {
-    setShowLoginMessage(true);
-  };
+  /* =========================
+     MAIN
+  ========================= */
 
   return (
     <div className="book-details-page">
       <Navbar />
 
-      {/* ================= BREADCRUMB ================= */}
+      {/* BREADCRUMB */}
 
       <div className="book-details-breadcrumb">
         <div className="book-details-container">
@@ -151,7 +356,7 @@ function BookDetails() {
 
           <span>/</span>
 
-          <span>{book.category}</span>
+          <span>{categoryName}</span>
 
           <span>/</span>
 
@@ -159,16 +364,24 @@ function BookDetails() {
         </div>
       </div>
 
-      {/* ================= MAIN ================= */}
+      {/* MAIN */}
 
       <main className="book-details-main">
         <div className="book-details-container">
           <div className="book-details-layout">
-            {/* ================= COVER ================= */}
+            {/* COVER */}
 
             <div className="book-details-cover-section">
               <div className="book-details-cover">
-                <img src={book.cover} alt={book.title} />
+                <img
+                  src={coverImage}
+                  alt={book.title || "Book"}
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+
+                    event.currentTarget.src = DEFAULT_COVER;
+                  }}
+                />
 
                 <div
                   className={`book-details-availability ${
@@ -188,73 +401,110 @@ function BookDetails() {
               <div className="book-cover-note">
                 <Library size={15} />
 
-                <span>Physical copy available in college library</span>
+                <span>Physical copy available in the library</span>
               </div>
             </div>
 
-            {/* ================= INFORMATION ================= */}
+            {/* CONTENT */}
 
             <div className="book-details-content">
-              <div className="book-details-category">{book.category}</div>
+              <span className="book-details-category">{categoryName}</span>
 
               <h1>{book.title}</h1>
 
               <p className="book-details-author">
-                by <strong>{book.author}</strong>
+                by <strong>{book.author || "Unknown Author"}</strong>
               </p>
+
+              {/* RATING */}
 
               <div className="book-details-rating">
                 <div className="rating-stars">
                   <Star size={17} fill="currentColor" />
-                  <strong>{book.rating}</strong>
+
+                  <strong>{book.rating ?? "N/A"}</strong>
                 </div>
 
-                <span>Highly rated by library members</span>
+                <span>Library catalogue rating</span>
               </div>
 
-              <p className="book-details-description">{book.description}</p>
+              {/* DESCRIPTION */}
 
-              {/* ================= ACTIONS ================= */}
+              <p className="book-details-description">
+                {book.description ||
+                  "No description is available for this book yet."}
+              </p>
+
+              {/* ACTIONS */}
 
               <div className="book-details-actions">
                 {isAvailable ? (
                   <button
+                    type="button"
                     className="book-borrow-btn"
-                    onClick={handleProtectedAction}
+                    onClick={handleBorrow}
+                    disabled={actionLoading}
                   >
-                    <BookOpen size={18} />
-                    Borrow Book
+                    {actionLoading ? (
+                      <LoaderCircle size={18} className="book-action-spinner" />
+                    ) : (
+                      <BookOpen size={18} />
+                    )}
+
+                    {actionLoading ? "Borrowing..." : "Borrow Book"}
                   </button>
                 ) : (
                   <button
-                    className="book-reserve-btn"
-                    onClick={handleProtectedAction}
+                    type="button"
+                    className="book-notify-btn"
+                    onClick={() =>
+                      setActionMessage("This book is currently unavailable.")
+                    }
                   >
                     <Clock3 size={18} />
-                    Reserve Book
+                    Currently Unavailable
                   </button>
                 )}
 
                 <button
+                  type="button"
                   className={`book-wishlist-btn ${wishlist ? "active" : ""}`}
-                  onClick={() => setWishlist(!wishlist)}
-                  title={wishlist ? "Remove from wishlist" : "Add to wishlist"}
+                  onClick={toggleWishlist}
                 >
                   <Heart size={19} fill={wishlist ? "currentColor" : "none"} />
                 </button>
               </div>
 
-              {/* ================= AVAILABILITY ================= */}
+              {/* SUCCESS */}
+
+              {actionMessage && (
+                <div className="book-action-message success">
+                  <CheckCircle2 size={16} />
+
+                  <span>{actionMessage}</span>
+                </div>
+              )}
+
+              {/* ERROR */}
+
+              {actionError && (
+                <div className="book-action-message error">
+                  <XCircle size={16} />
+
+                  <span>{actionError}</span>
+                </div>
+              )}
+
+              {/* COPY STATUS */}
 
               <div className="book-copy-status">
                 <div className="copy-status-icon">
                   <Library size={19} />
                 </div>
 
-                <div>
+                <div className="copy-status-content">
                   <strong>
-                    {book.availableCopies} of {book.totalCopies} copies
-                    available
+                    {availableCopies} of {totalCopies} copies available
                   </strong>
 
                   <span>
@@ -273,7 +523,7 @@ function BookDetails() {
                 </div>
               </div>
 
-              {/* ================= DETAILS ================= */}
+              {/* BOOK INFORMATION */}
 
               <div className="book-information">
                 <h2>Book Information</h2>
@@ -284,7 +534,7 @@ function BookDetails() {
 
                     <span>ISBN</span>
 
-                    <strong>{book.isbn}</strong>
+                    <strong>{book.isbn || "—"}</strong>
                   </div>
 
                   <div>
@@ -292,7 +542,7 @@ function BookDetails() {
 
                     <span>Publication Year</span>
 
-                    <strong>{book.year}</strong>
+                    <strong>{publicationYear}</strong>
                   </div>
 
                   <div>
@@ -300,15 +550,7 @@ function BookDetails() {
 
                     <span>Author</span>
 
-                    <strong>{book.author}</strong>
-                  </div>
-
-                  <div>
-                    <BookOpen size={16} />
-
-                    <span>Pages</span>
-
-                    <strong>{book.pages}</strong>
+                    <strong>{book.author || "—"}</strong>
                   </div>
 
                   <div>
@@ -316,22 +558,30 @@ function BookDetails() {
 
                     <span>Publisher</span>
 
-                    <strong>{book.publisher}</strong>
+                    <strong>{book.publisher || "—"}</strong>
                   </div>
 
                   <div>
-                    <MapPin size={16} />
+                    <BookOpen size={16} />
 
-                    <span>Location</span>
+                    <span>Total Copies</span>
 
-                    <strong>Main Library</strong>
+                    <strong>{totalCopies}</strong>
+                  </div>
+
+                  <div>
+                    <CheckCircle2 size={16} />
+
+                    <span>Available Copies</span>
+
+                    <strong>{availableCopies}</strong>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ================= LIBRARY NOTE ================= */}
+          {/* LIBRARY NOTE */}
 
           <section className="book-library-note">
             <div className="book-library-note-icon">
@@ -342,7 +592,7 @@ function BookDetails() {
               <h3>Library Collection</h3>
 
               <p>
-                This book is part of the Pustakalaya college library collection.
+                This book is part of the Pustakalaya library collection.
                 Availability is updated whenever books are issued or returned.
               </p>
             </div>
@@ -350,22 +600,23 @@ function BookDetails() {
         </div>
       </main>
 
-      {/* ================= LOGIN MESSAGE ================= */}
+      {/* LOGIN MODAL */}
 
-      {showLoginMessage && (
+      {showLoginModal && (
         <div
           className="book-login-overlay"
-          onClick={() => setShowLoginMessage(false)}
+          onClick={() => setShowLoginModal(false)}
         >
           <div
             className="book-login-modal"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
           >
             <button
+              type="button"
               className="book-modal-close"
-              onClick={() => setShowLoginMessage(false)}
+              onClick={() => setShowLoginModal(false)}
             >
-              <XCircle size={20} />
+              <X size={19} />
             </button>
 
             <div className="book-modal-icon">
@@ -374,22 +625,21 @@ function BookDetails() {
 
             <h2>Login Required</h2>
 
-            <p>
-              Please log in to your Pustakalaya account to borrow, reserve or
-              manage this book.
-            </p>
+            <p>Please log in to your Pustakalaya account to borrow books.</p>
 
             <div className="book-modal-actions">
               <button
-                onClick={() => navigate("/login")}
+                type="button"
                 className="book-modal-login"
+                onClick={() => navigate("/login")}
               >
                 Login
               </button>
 
               <button
-                onClick={() => navigate("/signup")}
+                type="button"
                 className="book-modal-signup"
+                onClick={() => navigate("/signup")}
               >
                 Create Account
               </button>

@@ -1,275 +1,289 @@
 import {
+  ArrowRight,
+  BookOpen,
+  ChevronDown,
+  Heart,
+  RotateCcw,
   Search,
   SlidersHorizontal,
   X,
-  ChevronDown,
-  BookOpen,
-  Heart,
-  ArrowRight,
-  RotateCcw,
 } from "lucide-react";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
 import { Link, useSearchParams } from "react-router-dom";
 
 import Navbar from "../../../components/Navbar/Navbar";
 import Footer from "../../../components/Footer/Footer";
 
+import { getAllBooks } from "../../../services/bookService";
+
 import "./Books.css";
 
-const books = [
-  {
-    id: 1,
-    title: "Clean Code",
-    author: "Robert C. Martin",
-    category: "Programming",
-    isbn: "9780132350884",
-    year: 2008,
-    rating: 4.8,
-    totalCopies: 5,
-    availableCopies: 3,
-    cover:
-      "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=500&q=80",
-  },
-  {
-    id: 2,
-    title: "Database System Concepts",
-    author: "Abraham Silberschatz",
-    category: "Database",
-    isbn: "9780078022159",
-    year: 2019,
-    rating: 4.7,
-    totalCopies: 4,
-    availableCopies: 0,
-    cover:
-      "https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=500&q=80",
-  },
-  {
-    id: 3,
-    title: "Computer Networks",
-    author: "Andrew S. Tanenbaum",
-    category: "Networking",
-    isbn: "9780132126953",
-    year: 2011,
-    rating: 4.6,
-    totalCopies: 6,
-    availableCopies: 2,
-    cover:
-      "https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=500&q=80",
-  },
-  {
-    id: 4,
-    title: "The Pragmatic Programmer",
-    author: "David Thomas",
-    category: "Programming",
-    isbn: "9780135957059",
-    year: 2019,
-    rating: 4.9,
-    totalCopies: 5,
-    availableCopies: 4,
-    cover:
-      "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=500&q=80",
-  },
-  {
-    id: 5,
-    title: "Introduction to Algorithms",
-    author: "Thomas H. Cormen",
-    category: "Algorithms",
-    isbn: "9780262046305",
-    year: 2022,
-    rating: 4.8,
-    totalCopies: 7,
-    availableCopies: 5,
-    cover:
-      "https://images.unsplash.com/photo-1516979187457-637abb4f9353?auto=format&fit=crop&w=500&q=80",
-  },
-  {
-    id: 6,
-    title: "Operating System Concepts",
-    author: "Abraham Silberschatz",
-    category: "Operating Systems",
-    isbn: "9781119800361",
-    year: 2021,
-    rating: 4.5,
-    totalCopies: 5,
-    availableCopies: 0,
-    cover:
-      "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=500&q=80",
-  },
-  {
-    id: 7,
-    title: "Artificial Intelligence",
-    author: "Stuart Russell",
-    category: "Artificial Intelligence",
-    isbn: "9780134610993",
-    year: 2020,
-    rating: 4.7,
-    totalCopies: 4,
-    availableCopies: 2,
-    cover:
-      "https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=500&q=80",
-  },
-  {
-    id: 8,
-    title: "Java: The Complete Reference",
-    author: "Herbert Schildt",
-    category: "Programming",
-    isbn: "9781260440232",
-    year: 2020,
-    rating: 4.4,
-    totalCopies: 6,
-    availableCopies: 3,
-    cover:
-      "https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=500&q=80",
-  },
-  {
-    id: 9,
-    title: "Engineering Mathematics",
-    author: "John Bird",
-    category: "Mathematics",
-    isbn: "9780415673333",
-    year: 2017,
-    rating: 4.3,
-    totalCopies: 5,
-    availableCopies: 1,
-    cover:
-      "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=500&q=80",
-  },
-  {
-    id: 10,
-    title: "Power of Habit",
-    author: "Charles Duhigg",
-    category: "Self Development",
-    isbn: "9780812981605",
-    year: 2012,
-    rating: 4.6,
-    totalCopies: 4,
-    availableCopies: 4,
-    cover:
-      "https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=500&q=80",
-  },
-  {
-    id: 11,
-    title: "Atomic Habits",
-    author: "James Clear",
-    category: "Self Development",
-    isbn: "9780735211292",
-    year: 2018,
-    rating: 4.9,
-    totalCopies: 8,
-    availableCopies: 6,
-    cover:
-      "https://images.unsplash.com/photo-1511108690759-009324a90311?auto=format&fit=crop&w=500&q=80",
-  },
-  {
-    id: 12,
-    title: "Fundamentals of Physics",
-    author: "David Halliday",
-    category: "Physics",
-    isbn: "9781119454199",
-    year: 2018,
-    rating: 4.5,
-    totalCopies: 5,
-    availableCopies: 0,
-    cover:
-      "https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?auto=format&fit=crop&w=500&q=80",
-  },
-];
+const ALL_CATEGORIES = "All Categories";
 
-const categories = [
-  "All Categories",
-  "Programming",
-  "Database",
-  "Networking",
-  "Algorithms",
-  "Operating Systems",
-  "Artificial Intelligence",
-  "Mathematics",
-  "Physics",
-  "Self Development",
-];
+const WISHLIST_KEY = "pustakalaya_wishlist";
+
+const DEFAULT_COVER =
+  "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=500&q=80";
+
+/* =========================
+   WISHLIST
+========================= */
+
+function getWishlistIds() {
+  try {
+    const value = JSON.parse(localStorage.getItem(WISHLIST_KEY) || "[]");
+
+    return Array.isArray(value) ? value.map(Number) : [];
+  } catch {
+    return [];
+  }
+}
+
+/* =========================
+   CATEGORY
+========================= */
+
+function getCategoryName(book) {
+  if (!book) {
+    return "General";
+  }
+
+  if (book.category && typeof book.category === "object") {
+    return book.category.name || "General";
+  }
+
+  return String(book.category || "General");
+}
+
+/* =========================
+   AVAILABLE COPIES
+========================= */
+
+function getAvailableCopies(book) {
+  return Number(book?.availableCopies ?? 0);
+}
+
+/* =========================
+   TOTAL COPIES
+========================= */
+
+function getTotalCopies(book) {
+  return Number(book?.totalCopies ?? 0);
+}
+
+/* =========================
+   PUBLICATION YEAR
+========================= */
+
+function getPublicationYear(book) {
+  return Number(book?.publicationYear ?? 0);
+}
+
+/* =========================
+   COVER
+========================= */
+
+function getCoverImage(book) {
+  return book?.coverImage || DEFAULT_COVER;
+}
+
+/* =========================
+   COMPONENT
+========================= */
 
 function Books() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const initialSearch = searchParams.get("search") || "";
-  const initialCategory = searchParams.get("category") || "All Categories";
+  const [books, setBooks] = useState([]);
 
-  const [search, setSearch] = useState(initialSearch);
-  const [category, setCategory] = useState(initialCategory);
+  const [loading, setLoading] = useState(true);
+
+  const [loadError, setLoadError] = useState("");
+
+  const [search, setSearch] = useState(searchParams.get("search") || "");
+
+  const [category, setCategory] = useState(
+    searchParams.get("category") || ALL_CATEGORIES,
+  );
+
   const [availability, setAvailability] = useState("all");
+
   const [year, setYear] = useState("all");
-  const [rating, setRating] = useState("all");
+
   const [sort, setSort] = useState("default");
 
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const [wishlistIds, setWishlistIds] = useState(getWishlistIds);
+
+  /* =========================
+     LOAD BOOKS
+  ========================= */
+
+  const loadBooks = async () => {
+    try {
+      setLoading(true);
+      setLoadError("");
+
+      const data = await getAllBooks();
+
+      console.log("BOOKS FROM BACKEND:", data);
+
+      setBooks(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Unable to load books:", error);
+
+      setBooks([]);
+
+      setLoadError(error.message || "Unable to load books.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadBooks();
+  }, []);
+
+  /* =========================
+     URL PARAMETERS
+  ========================= */
+
+  useEffect(() => {
+    setSearch(searchParams.get("search") || "");
+
+    setCategory(searchParams.get("category") || ALL_CATEGORIES);
+  }, [searchParams]);
+
+  /* =========================
+     WISHLIST
+  ========================= */
+
+  const toggleWishlist = (bookId) => {
+    const numericId = Number(bookId);
+
+    setWishlistIds((previous) => {
+      const next = previous.includes(numericId)
+        ? previous.filter((id) => id !== numericId)
+        : [...previous, numericId];
+
+      localStorage.setItem(WISHLIST_KEY, JSON.stringify(next));
+
+      return next;
+    });
+  };
+
+  /* =========================
+     CATEGORIES
+  ========================= */
+
+  const categories = useMemo(() => {
+    const names = books.map(getCategoryName).filter(Boolean);
+
+    return [ALL_CATEGORIES, ...Array.from(new Set(names))];
+  }, [books]);
+
+  /* =========================
+     FILTER + SORT
+  ========================= */
 
   const filteredBooks = useMemo(() => {
     let result = [...books];
 
     const query = search.trim().toLowerCase();
 
+    /* SEARCH */
+
     if (query) {
-      result = result.filter((book) =>
-        [book.title, book.author, book.isbn, book.category].some((value) =>
-          value.toLowerCase().includes(query),
-        ),
-      );
-    }
-
-    if (category !== "All Categories") {
-      result = result.filter((book) => book.category === category);
-    }
-
-    if (availability === "available") {
-      result = result.filter((book) => book.availableCopies > 0);
-    }
-
-    if (availability === "unavailable") {
-      result = result.filter((book) => book.availableCopies === 0);
-    }
-
-    if (year !== "all") {
       result = result.filter((book) => {
-        if (year === "2020+") return book.year >= 2020;
-        if (year === "2010-2019") return book.year >= 2010 && book.year <= 2019;
-        if (year === "before-2010") return book.year < 2010;
+        const title = String(book?.title || "").toLowerCase();
 
-        return true;
+        const author = String(book?.author || "").toLowerCase();
+
+        const isbn = String(book?.isbn || "").toLowerCase();
+
+        const categoryName = getCategoryName(book).toLowerCase();
+
+        return (
+          title.includes(query) ||
+          author.includes(query) ||
+          isbn.includes(query) ||
+          categoryName.includes(query)
+        );
       });
     }
 
-    if (rating !== "all") {
-      const minimumRating = Number(rating);
+    /* CATEGORY */
 
-      result = result.filter((book) => book.rating >= minimumRating);
+    if (category !== ALL_CATEGORIES) {
+      result = result.filter((book) => getCategoryName(book) === category);
     }
 
+    /* AVAILABILITY */
+
+    if (availability === "available") {
+      result = result.filter((book) => getAvailableCopies(book) > 0);
+    }
+
+    if (availability === "unavailable") {
+      result = result.filter((book) => getAvailableCopies(book) === 0);
+    }
+
+    /* YEAR */
+
+    if (year === "2020+") {
+      result = result.filter((book) => getPublicationYear(book) >= 2020);
+    }
+
+    if (year === "2010-2019") {
+      result = result.filter((book) => {
+        const value = getPublicationYear(book);
+
+        return value >= 2010 && value <= 2019;
+      });
+    }
+
+    if (year === "before-2010") {
+      result = result.filter((book) => {
+        const value = getPublicationYear(book);
+
+        return value > 0 && value < 2010;
+      });
+    }
+
+    /* SORT */
+
     if (sort === "title-asc") {
-      result.sort((a, b) => a.title.localeCompare(b.title));
+      result.sort((a, b) =>
+        String(a.title || "").localeCompare(String(b.title || "")),
+      );
     }
 
     if (sort === "title-desc") {
-      result.sort((a, b) => b.title.localeCompare(a.title));
+      result.sort((a, b) =>
+        String(b.title || "").localeCompare(String(a.title || "")),
+      );
     }
 
     if (sort === "newest") {
-      result.sort((a, b) => b.year - a.year);
+      result.sort((a, b) => getPublicationYear(b) - getPublicationYear(a));
     }
 
     if (sort === "oldest") {
-      result.sort((a, b) => a.year - b.year);
-    }
-
-    if (sort === "rating") {
-      result.sort((a, b) => b.rating - a.rating);
+      result.sort((a, b) => getPublicationYear(a) - getPublicationYear(b));
     }
 
     return result;
-  }, [search, category, availability, year, rating, sort]);
+  }, [books, search, category, availability, year, sort]);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
+  /* =========================
+     SEARCH
+  ========================= */
+
+  const handleSearch = (event) => {
+    event.preventDefault();
 
     const params = {};
 
@@ -277,37 +291,43 @@ function Books() {
       params.search = search.trim();
     }
 
-    if (category !== "All Categories") {
+    if (category !== ALL_CATEGORIES) {
       params.category = category;
     }
 
     setSearchParams(params);
   };
 
+  /* =========================
+     CLEAR FILTERS
+  ========================= */
+
   const clearFilters = () => {
     setSearch("");
-    setCategory("All Categories");
+    setCategory(ALL_CATEGORIES);
     setAvailability("all");
     setYear("all");
-    setRating("all");
     setSort("default");
 
     setSearchParams({});
   };
 
   const activeFilterCount = [
-    category !== "All Categories",
+    category !== ALL_CATEGORIES,
     availability !== "all",
     year !== "all",
-    rating !== "all",
     sort !== "default",
   ].filter(Boolean).length;
+
+  /* =========================
+     UI
+  ========================= */
 
   return (
     <div className="books-page">
       <Navbar />
 
-      {/* ================= HEADER ================= */}
+      {/* HEADER */}
 
       <section className="books-header">
         <div className="books-container">
@@ -319,14 +339,14 @@ function Books() {
             </h1>
 
             <p>
-              Discover books across different subjects, search our catalogue,
-              and find your next great read.
+              Discover books across different subjects, check availability, and
+              find your next great read.
             </p>
           </div>
         </div>
       </section>
 
-      {/* ================= SEARCH ================= */}
+      {/* SEARCH */}
 
       <section className="books-search-section">
         <div className="books-container">
@@ -337,7 +357,7 @@ function Books() {
               type="text"
               placeholder="Search by title, author, ISBN or category..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(event) => setSearch(event.target.value)}
             />
 
             {search && (
@@ -357,13 +377,14 @@ function Books() {
         </div>
       </section>
 
-      {/* ================= MAIN ================= */}
+      {/* MAIN */}
 
       <main className="books-main">
         <div className="books-container">
-          {/* Mobile Filter Button */}
+          {/* MOBILE FILTER */}
 
           <button
+            type="button"
             className="books-mobile-filter-btn"
             onClick={() => setFiltersOpen(true)}
           >
@@ -373,7 +394,7 @@ function Books() {
           </button>
 
           <div className="books-layout">
-            {/* ================= FILTERS ================= */}
+            {/* FILTER SIDEBAR */}
 
             <aside
               className={`books-filter ${
@@ -390,6 +411,7 @@ function Books() {
                 </div>
 
                 <button
+                  type="button"
                   className="books-filter-close"
                   onClick={() => setFiltersOpen(false)}
                 >
@@ -397,14 +419,14 @@ function Books() {
                 </button>
               </div>
 
-              {/* Category */}
+              {/* CATEGORY */}
 
               <div className="books-filter-group">
                 <label>Category</label>
 
                 <select
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  onChange={(event) => setCategory(event.target.value)}
                 >
                   {categories.map((item) => (
                     <option key={item} value={item}>
@@ -414,7 +436,7 @@ function Books() {
                 </select>
               </div>
 
-              {/* Availability */}
+              {/* AVAILABILITY */}
 
               <div className="books-filter-group">
                 <label>Availability</label>
@@ -426,8 +448,9 @@ function Books() {
                       name="availability"
                       value="all"
                       checked={availability === "all"}
-                      onChange={(e) => setAvailability(e.target.value)}
+                      onChange={(event) => setAvailability(event.target.value)}
                     />
+
                     <span>All Books</span>
                   </label>
 
@@ -437,10 +460,11 @@ function Books() {
                       name="availability"
                       value="available"
                       checked={availability === "available"}
-                      onChange={(e) => setAvailability(e.target.value)}
+                      onChange={(event) => setAvailability(event.target.value)}
                     />
+
                     <span>
-                      <i className="available-dot"></i>
+                      <i className="available-dot" />
                       Available
                     </span>
                   </label>
@@ -451,22 +475,26 @@ function Books() {
                       name="availability"
                       value="unavailable"
                       checked={availability === "unavailable"}
-                      onChange={(e) => setAvailability(e.target.value)}
+                      onChange={(event) => setAvailability(event.target.value)}
                     />
+
                     <span>
-                      <i className="unavailable-dot"></i>
+                      <i className="unavailable-dot" />
                       Currently Not Available
                     </span>
                   </label>
                 </div>
               </div>
 
-              {/* Year */}
+              {/* YEAR */}
 
               <div className="books-filter-group">
                 <label>Publication Year</label>
 
-                <select value={year} onChange={(e) => setYear(e.target.value)}>
+                <select
+                  value={year}
+                  onChange={(event) => setYear(event.target.value)}
+                >
                   <option value="all">All Years</option>
 
                   <option value="2020+">2020 & Newer</option>
@@ -477,33 +505,19 @@ function Books() {
                 </select>
               </div>
 
-              {/* Rating */}
+              {/* RESET */}
 
-              <div className="books-filter-group">
-                <label>Minimum Rating</label>
-
-                <select
-                  value={rating}
-                  onChange={(e) => setRating(e.target.value)}
-                >
-                  <option value="all">Any Rating</option>
-
-                  <option value="4.5">4.5 ★ & above</option>
-
-                  <option value="4">4 ★ & above</option>
-
-                  <option value="3">3 ★ & above</option>
-                </select>
-              </div>
-
-              {/* Reset */}
-
-              <button className="books-reset-btn" onClick={clearFilters}>
+              <button
+                type="button"
+                className="books-reset-btn"
+                onClick={clearFilters}
+              >
                 <RotateCcw size={15} />
                 Clear All Filters
               </button>
 
               <button
+                type="button"
                 className="books-mobile-apply"
                 onClick={() => setFiltersOpen(false)}
               >
@@ -511,14 +525,16 @@ function Books() {
               </button>
             </aside>
 
+            {/* OVERLAY */}
+
             {filtersOpen && (
               <div
                 className="books-filter-overlay"
                 onClick={() => setFiltersOpen(false)}
-              ></div>
+              />
             )}
 
-            {/* ================= RESULTS ================= */}
+            {/* RESULTS */}
 
             <section className="books-results">
               <div className="books-results-top">
@@ -538,7 +554,7 @@ function Books() {
                     <select
                       id="sort"
                       value={sort}
-                      onChange={(e) => setSort(e.target.value)}
+                      onChange={(event) => setSort(event.target.value)}
                     >
                       <option value="default">Recommended</option>
 
@@ -549,8 +565,6 @@ function Books() {
                       <option value="newest">Newest</option>
 
                       <option value="oldest">Oldest</option>
-
-                      <option value="rating">Highest Rated</option>
                     </select>
 
                     <ChevronDown size={15} />
@@ -558,24 +572,77 @@ function Books() {
                 </div>
               </div>
 
-              {/* Results */}
+              {/* LOADING */}
 
-              {filteredBooks.length > 0 ? (
+              {loading && (
+                <div className="books-empty">
+                  <div className="books-empty-icon">
+                    <BookOpen size={35} />
+                  </div>
+
+                  <h3>Loading Books...</h3>
+
+                  <p>Getting books from the library database.</p>
+                </div>
+              )}
+
+              {/* ERROR */}
+
+              {!loading && loadError && (
+                <div className="books-empty">
+                  <div className="books-empty-icon">
+                    <BookOpen size={35} />
+                  </div>
+
+                  <h3>Unable to Load Books</h3>
+
+                  <p>{loadError}</p>
+
+                  <button type="button" onClick={loadBooks}>
+                    Try Again
+                  </button>
+                </div>
+              )}
+
+              {/* GRID */}
+
+              {!loading && !loadError && filteredBooks.length > 0 && (
                 <div className="books-grid">
                   {filteredBooks.map((book) => {
-                    const isAvailable = book.availableCopies > 0;
+                    const availableCopies = getAvailableCopies(book);
+
+                    const totalCopies = getTotalCopies(book);
+
+                    const isAvailable = availableCopies > 0;
+
+                    const isWishlisted = wishlistIds.includes(Number(book.id));
+
+                    const categoryName = getCategoryName(book);
+
+                    const coverImage = getCoverImage(book);
+
+                    const publicationYear = getPublicationYear(book);
 
                     return (
                       <article className="catalog-book-card" key={book.id}>
                         <div className="catalog-book-image">
-                          <img src={book.cover} alt={book.title} />
+                          <img
+                            src={coverImage}
+                            alt={book.title || "Book"}
+                            loading="lazy"
+                            onError={(event) => {
+                              event.currentTarget.onerror = null;
+
+                              event.currentTarget.src = DEFAULT_COVER;
+                            }}
+                          />
 
                           <span
                             className={`catalog-status ${
                               isAvailable ? "available" : "unavailable"
                             }`}
                           >
-                            <span></span>
+                            <span />
 
                             {isAvailable
                               ? "Available"
@@ -583,32 +650,41 @@ function Books() {
                           </span>
 
                           <button
-                            className="catalog-wishlist"
-                            title="Add to wishlist"
+                            type="button"
+                            className={`catalog-wishlist ${
+                              isWishlisted ? "active" : ""
+                            }`}
+                            onClick={() => toggleWishlist(book.id)}
                           >
-                            <Heart size={17} />
+                            <Heart
+                              size={17}
+                              fill={isWishlisted ? "currentColor" : "none"}
+                            />
                           </button>
                         </div>
 
                         <div className="catalog-book-info">
                           <span className="catalog-category">
-                            {book.category}
+                            {categoryName}
                           </span>
 
                           <h3>{book.title}</h3>
 
-                          <p className="catalog-author">{book.author}</p>
+                          <p className="catalog-author">
+                            {book.author || "Unknown Author"}
+                          </p>
 
                           <div className="catalog-meta">
-                            <span>★ {book.rating}</span>
+                            <span>
+                              {book.isbn ? `ISBN ${book.isbn}` : "No ISBN"}
+                            </span>
 
-                            <span>{book.year}</span>
+                            <span>{publicationYear}</span>
                           </div>
 
                           <div className="catalog-bottom">
                             <span className="catalog-copies">
-                              {book.availableCopies}/{book.totalCopies}{" "}
-                              available
+                              {availableCopies}/{totalCopies} available
                             </span>
 
                             <Link
@@ -623,7 +699,11 @@ function Books() {
                     );
                   })}
                 </div>
-              ) : (
+              )}
+
+              {/* EMPTY */}
+
+              {!loading && !loadError && filteredBooks.length === 0 && (
                 <div className="books-empty">
                   <div className="books-empty-icon">
                     <BookOpen size={35} />
@@ -633,7 +713,9 @@ function Books() {
 
                   <p>Try changing your search or clearing some filters.</p>
 
-                  <button onClick={clearFilters}>Clear Filters</button>
+                  <button type="button" onClick={clearFilters}>
+                    Clear Filters
+                  </button>
                 </div>
               )}
             </section>

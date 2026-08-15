@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:8080/api/fines";
+const API_URL = "http://localhost:8083/api/fines";
 
 /* =====================================================
    GET USER FINES

@@ -9,6 +9,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -26,13 +27,14 @@ public class SecurityConfig {
     }
 
     // =====================================================
-    // CORS
+    // CORS CONFIGURATION
     // =====================================================
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
-        CorsConfiguration configuration = new CorsConfiguration();
+        CorsConfiguration configuration =
+                new CorsConfiguration();
 
         configuration.setAllowedOrigins(
                 List.of(
@@ -79,39 +81,110 @@ public class SecurityConfig {
 
         http
 
-            // Disable CSRF because this is a REST API
+            // =================================================
+            // CSRF
+            // =================================================
+
             .csrf(csrf -> csrf.disable())
 
-            // Enable CORS
-            .cors(cors -> cors.configurationSource(
-                    corsConfigurationSource()
-            ))
+            // =================================================
+            // CORS
+            // =================================================
 
-            // API permissions
+            .cors(cors ->
+                    cors.configurationSource(
+                            corsConfigurationSource()
+                    )
+            )
+
+            // =================================================
+            // AUTHORIZATION
+            // =================================================
+
             .authorizeHttpRequests(auth -> auth
 
-                // Allow browser CORS preflight
+                // -------------------------------------------------
+                // CORS PREFLIGHT
+                // -------------------------------------------------
+
                 .requestMatchers(
                         HttpMethod.OPTIONS,
                         "/**"
                 ).permitAll()
 
-                // Public authentication APIs
+                // -------------------------------------------------
+                // AUTHENTICATION APIs
+                // -------------------------------------------------
+
                 .requestMatchers(
                         "/api/auth/login",
                         "/api/auth/signup/user",
                         "/api/auth/signup/librarian"
                 ).permitAll()
 
-                // Everything else requires authentication
+                // -------------------------------------------------
+                // PUBLIC BOOK APIs
+                // Users can browse books
+                // -------------------------------------------------
+
+                .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/books",
+                        "/api/books/**"
+                ).permitAll()
+
+                // -------------------------------------------------
+                // BOOK CREATE
+                // Temporarily public for testing
+                // -------------------------------------------------
+
+                .requestMatchers(
+                        HttpMethod.POST,
+                        "/api/books"
+                ).permitAll()
+
+                // -------------------------------------------------
+                // BOOK UPDATE
+                // Temporarily public for testing
+                // -------------------------------------------------
+
+                .requestMatchers(
+                        HttpMethod.PUT,
+                        "/api/books/**"
+                ).permitAll()
+
+                // -------------------------------------------------
+                // BOOK DELETE
+                // Temporarily public for testing
+                // -------------------------------------------------
+
+                .requestMatchers(
+                        HttpMethod.DELETE,
+                        "/api/books/**"
+                ).permitAll()
+
+                // -------------------------------------------------
+                // EVERYTHING ELSE
+                // -------------------------------------------------
+
                 .anyRequest().authenticated()
             )
 
-            // Disable Spring's default login page
-            .formLogin(form -> form.disable())
+            // =================================================
+            // DISABLE DEFAULT LOGIN PAGE
+            // =================================================
 
-            // Disable HTTP Basic
-            .httpBasic(basic -> basic.disable());
+            .formLogin(
+                    form -> form.disable()
+            )
+
+            // =================================================
+            // DISABLE HTTP BASIC
+            // =================================================
+
+            .httpBasic(
+                    basic -> basic.disable()
+            );
 
         return http.build();
     }
