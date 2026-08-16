@@ -7,11 +7,8 @@ import axios from "axios";
 const API_URL = "http://localhost:8083/api/auth";
 
 /*
- * Spring Boot uses HTTP Session.
- *
- * withCredentials: true is REQUIRED so that
- * the browser sends the JSESSIONID cookie
- * with every request.
+ * The browser must send the session cookie
+ * created by Spring Boot.
  */
 const api = axios.create({
   baseURL: API_URL,
@@ -114,10 +111,10 @@ export async function loginUser(credentials) {
     /*
      * IMPORTANT:
      *
-     * We DO NOT store the user in localStorage.
+     * No localStorage here.
      *
-     * Authentication is maintained by the
-     * Spring Boot HTTP session.
+     * Spring Boot session/cookie is responsible
+     * for remembering the login.
      */
 
     return user;
@@ -146,8 +143,8 @@ export async function getCurrentUser() {
     return user;
   } catch (error) {
     /*
-     * 401 / 403 means there is no active
-     * authenticated session.
+     * 401/403 simply means the user
+     * is not logged in.
      */
 
     if (error.response?.status === 401 || error.response?.status === 403) {
@@ -226,17 +223,8 @@ export async function isTeacher() {
 export async function logoutUser() {
   try {
     await api.post("/logout");
-
-    return true;
   } catch (error) {
-    /*
-     * Even if the backend logout request fails,
-     * the frontend should still clear its user state.
-     */
-
     console.error("Logout error:", error);
-
-    return false;
   }
 }
 

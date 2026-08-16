@@ -39,7 +39,6 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(
                 List.of(
                         "http://localhost:5173",
-                        "http://localhost:5174",
                         "http://localhost:5176"
                 )
         );
@@ -125,6 +124,7 @@ public class SecurityConfig {
 
                 // -------------------------------------------------
                 // PUBLIC BOOK APIs
+                // Users can browse books
                 // -------------------------------------------------
 
                 .requestMatchers(
@@ -164,7 +164,7 @@ public class SecurityConfig {
                 ).permitAll()
 
                 // -------------------------------------------------
-                // WISHLIST
+                // BOOK WISHLIST
                 // Temporarily public for testing
                 // -------------------------------------------------
 
@@ -172,41 +172,31 @@ public class SecurityConfig {
                         "/api/wishlist/**"
                 ).permitAll()
 
-                // =================================================
-                // BORROW & RETURN
-                // Temporarily public for backend testing
-                // =================================================
-
-                .requestMatchers(
-                        HttpMethod.POST,
-                        "/api/borrow/borrow"
-                ).permitAll()
-
-                .requestMatchers(
-                        HttpMethod.GET,
-                        "/api/borrow/user/**"
-                ).permitAll()
-
-                .requestMatchers(
-                        HttpMethod.GET,
-                        "/api/borrow/history/**"
-                ).permitAll()
-
-                .requestMatchers(
-                        HttpMethod.GET,
-                        "/api/borrow/active"
-                ).permitAll()
-
-                .requestMatchers(
-                        HttpMethod.PUT,
-                        "/api/borrow/return/**"
-                ).permitAll()
-
-                // -------------------------------------------------
-                // EVERYTHING ELSE
-                // -------------------------------------------------
-
-                .anyRequest().authenticated()
+	             // -------------------------------------------------
+	             // BORROW REQUESTS
+	             // Authentication is handled using HTTP Session
+	             // inside BorrowRequestController
+	             // -------------------------------------------------
+	
+	             .requestMatchers(
+	                     "/api/borrow-requests/**"
+	             ).permitAll()
+	
+	             // -------------------------------------------------
+	             // NOTIFICATIONS
+	             // Authentication is handled by the application
+	             // using the logged-in user's ID/session.
+	             // -------------------------------------------------
+	
+	             .requestMatchers(
+	                     "/api/notifications/**"
+	             ).permitAll()
+	
+	             // -------------------------------------------------
+	             // EVERYTHING ELSE
+	             // -------------------------------------------------
+	
+	             .anyRequest().authenticated()
             )
 
             // =================================================

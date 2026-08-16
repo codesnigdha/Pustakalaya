@@ -8,6 +8,9 @@ import {
   RefreshCw,
   AlertCircle,
   User,
+  Check,
+  XCircle,
+  Bell,
 } from "lucide-react";
 
 import { useEffect, useMemo, useState } from "react";
@@ -23,6 +26,8 @@ const BORROW_API = "http://localhost:8083/api/borrow";
 const BOOK_API = "http://localhost:8083/api/books";
 
 const USER_API = "http://localhost:8083/api/users";
+
+const BORROW_REQUEST_API = "http://localhost:8083/api/borrow-requests";
 
 /* =====================================================
    ERROR HANDLER
@@ -88,7 +93,7 @@ function getStatus(record) {
 
 export default function BorrowReturn() {
   /* =====================================================
-     STATE
+     EXISTING STATE
   ===================================================== */
 
   const [records, setRecords] = useState([]);
@@ -117,6 +122,20 @@ export default function BorrowReturn() {
     userId: "",
     bookId: "",
   });
+
+  /* =====================================================
+     BORROW REQUEST STATE
+     
+     ONLY NEW REQUEST-RELATED STATE
+  ===================================================== */
+
+  const [borrowRequests, setBorrowRequests] = useState([]);
+
+  const [requestsLoading, setRequestsLoading] = useState(false);
+
+  const [requestActionId, setRequestActionId] = useState(null);
+
+  const [showRequests, setShowRequests] = useState(true);
 
   /* =====================================================
      LOAD ACTIVE BORROWS
@@ -193,6 +212,49 @@ export default function BorrowReturn() {
   }
 
   /* =====================================================
+     LOAD BORROW REQUESTS
+     
+     NEW
+  ===================================================== */
+
+  async function loadBorrowRequests() {
+    try {
+      setRequestsLoading(true);
+
+      const response = await fetch(`${BORROW_REQUEST_API}/pending`, {
+        credentials: "include",
+      });
+
+      const data = await response.json().catch(() => []);
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message ||
+            data?.error ||
+            (typeof data === "string"
+              ? data
+              : "Unable to load borrow requests."),
+        );
+      }
+
+      setBorrowRequests(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Borrow requests error:", err);
+
+      /*
+       * Do not destroy the existing
+       * Borrow & Return page if requests
+       * cannot be loaded.
+       */
+      setBorrowRequests([]);
+
+      setError(getErrorMessage(err) || "Unable to load borrow requests.");
+    } finally {
+      setRequestsLoading(false);
+    }
+  }
+
+  /* =====================================================
      LOAD EVERYTHING
   ===================================================== */
 
@@ -204,7 +266,12 @@ export default function BorrowReturn() {
 
       setError("");
 
-      await Promise.all([loadBorrows(), loadBooks(), loadUsers()]);
+      await Promise.all([
+        loadBorrows(),
+        loadBooks(),
+        loadUsers(),
+        loadBorrowRequests(),
+      ]);
     } catch (err) {
       console.error("Load circulation data error:", err);
 
@@ -257,14 +324,6 @@ export default function BorrowReturn() {
 
   /* =====================================================
      GET BOOK FROM BORROW RECORD
-     
-     Supports:
-     
-     record.book
-     
-     OR
-     
-     record.bookId -> books API
   ===================================================== */
 
   function getBook(record) {
@@ -283,14 +342,6 @@ export default function BorrowReturn() {
 
   /* =====================================================
      GET USER
-     
-     Supports:
-     
-     record.user
-     
-     OR
-     
-     record.userId -> users API
   ===================================================== */
 
   function getUser(record) {
@@ -414,8 +465,6 @@ export default function BorrowReturn() {
     return records.filter((record) => {
       const book = getBook(record);
 
-      const user = getUser(record);
-
       const title = getBookTitle(record).toLowerCase();
 
       const author = getAuthor(record).toLowerCase();
@@ -466,14 +515,6 @@ export default function BorrowReturn() {
     (record) => getStatus(record) === "OVERDUE",
   ).length;
 
-  /*
-   * Current /active endpoint does not
-   * contain returned records.
-   *
-   * Therefore this remains 0 until
-   * we add a backend endpoint for
-   * today's returned books.
-   */
   const returnedToday = 0;
 
   /* =====================================================
@@ -652,6 +693,242 @@ export default function BorrowReturn() {
   }
 
   /* =====================================================
+     GET LIBRARIAN ID
+     
+     Used only when approving a request.
+  ===================================================== */
+
+  function getLibrarianId() {
+    const possibleKeys = [
+      "user",
+      "currentUser",
+      "loggedInUser",
+      "authUser",
+      "PUSTAKALAYA_LOGGED_IN_USER",
+    ];
+
+    for (const key of possibleKeys) {
+      try {
+        const value = localStorage.getItem(key);
+
+        if (!value) {
+          continue;
+        }
+
+        const parsed = JSON.parse(value);
+
+        const id = parsed?.id ?? parsed?.user?.id;
+
+        if (id) {
+          return Number(id);
+        }
+      } catch {
+        const value = localStorage.getItem(key);
+
+        if (value && !Number.isNaN(Number(value))) {
+          return Number(value);
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /* =====================================================
+     APPROVE BORROW REQUEST
+  ===================================================== */
+
+  async function handleApproveRequest(requestId) {
+    if (!requestId) {
+      setError("Borrow request ID is missing.");
+
+      return;
+    }
+
+    const librarianId = getLibrarianId();
+
+    if (!librarianId) {
+      setError("Librarian ID could not be found. Please login again.");
+
+      return;
+    }
+
+    try {
+      setRequestActionId(requestId);
+
+      setError("");
+      setSuccess("");
+
+      const response = await fetch(
+        `${BORROW_REQUEST_API}/${requestId}/approve/${librarianId}`,
+        {
+          method: "PUT",
+
+          credentials: "include",
+        },
+      );
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message ||
+            data?.error ||
+            (typeof data === "string"
+              ? data
+              : "Unable to approve borrow request."),
+        );
+      }
+
+      setSuccess("Borrow request approved successfully.");
+
+      /*
+       * Remove the request from
+       * pending list immediately.
+       */
+      setBorrowRequests((previous) =>
+        previous.filter((request) => request.id !== requestId),
+      );
+
+      /*
+       * Reload circulation records
+       * because approval may create
+       * an active borrow record.
+       */
+      await loadBorrows();
+    } catch (err) {
+      console.error("Approve request error:", err);
+
+      setError(getErrorMessage(err));
+    } finally {
+      setRequestActionId(null);
+    }
+  }
+
+  /* =====================================================
+     REJECT / NOT AVAILABLE
+  ===================================================== */
+
+  async function handleRejectRequest(requestId) {
+    if (!requestId) {
+      setError("Borrow request ID is missing.");
+
+      return;
+    }
+
+    const message = window.prompt(
+      "Enter a message for the user (optional):",
+      "The book is currently not available.",
+    );
+
+    if (message === null) {
+      return;
+    }
+
+    const librarianId = getLibrarianId();
+
+    if (!librarianId) {
+      setError("Librarian ID could not be found. Please login again.");
+
+      return;
+    }
+
+    try {
+      setRequestActionId(requestId);
+
+      setError("");
+      setSuccess("");
+
+      const response = await fetch(
+        `${BORROW_REQUEST_API}/${requestId}/not-available`,
+        {
+          method: "PUT",
+
+          credentials: "include",
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify({
+            librarianId,
+            availableFrom: null,
+            message: message.trim() || "The book is currently not available.",
+          }),
+        },
+      );
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message ||
+            data?.error ||
+            (typeof data === "string"
+              ? data
+              : "Unable to reject borrow request."),
+        );
+      }
+
+      setSuccess("Borrow request rejected successfully.");
+
+      setBorrowRequests((previous) =>
+        previous.filter((request) => request.id !== requestId),
+      );
+    } catch (err) {
+      console.error("Reject request error:", err);
+
+      setError(getErrorMessage(err));
+    } finally {
+      setRequestActionId(null);
+    }
+  }
+
+  /* =====================================================
+     REQUEST BOOK TITLE
+  ===================================================== */
+
+  function getRequestBookTitle(request) {
+    return (
+      request?.book?.title ||
+      request?.bookTitle ||
+      (request?.book?.id
+        ? `Book #${request.book.id}`
+        : request?.bookId
+          ? `Book #${request.bookId}`
+          : "Unknown Book")
+    );
+  }
+
+  /* =====================================================
+     REQUEST USER NAME
+  ===================================================== */
+
+  function getRequestUserName(request) {
+    const user = request?.user;
+
+    if (user) {
+      return (
+        user.name ||
+        user.fullName ||
+        user.username ||
+        user.email ||
+        `User #${user.id}`
+      );
+    }
+
+    if (request?.userName) {
+      return request.userName;
+    }
+
+    if (request?.userId) {
+      return `User #${request.userId}`;
+    }
+
+    return "Unknown User";
+  }
+
+  /* =====================================================
      RENDER
   ===================================================== */
 
@@ -723,7 +1000,183 @@ export default function BorrowReturn() {
       )}
 
       {/* =================================================
+          BORROW REQUESTS
+          
+          NEW SECTION
+          
+          Existing circulation code below
+          remains separate.
+      ================================================= */}
+
+      <section className="borrow-requests-section">
+        <div className="borrow-requests-header">
+          <div className="borrow-requests-title">
+            <div className="borrow-requests-icon">
+              <Bell size={20} />
+            </div>
+
+            <div>
+              <span>USER REQUESTS</span>
+
+              <h2>Borrow Requests</h2>
+
+              <p>Review requests submitted by library users.</p>
+            </div>
+          </div>
+
+          <div className="borrow-requests-header-actions">
+            <span className="borrow-request-count">
+              {borrowRequests.length} Pending
+            </span>
+
+            <button
+              type="button"
+              className="borrow-request-refresh"
+              onClick={loadBorrowRequests}
+              disabled={requestsLoading}
+            >
+              <RefreshCw
+                size={15}
+                className={requestsLoading ? "borrow-spin" : ""}
+              />
+              Refresh
+            </button>
+
+            <button
+              type="button"
+              className="borrow-request-toggle"
+              onClick={() => setShowRequests((previous) => !previous)}
+            >
+              {showRequests ? "Hide" : "Show"}
+            </button>
+          </div>
+        </div>
+
+        {showRequests && (
+          <div className="borrow-request-list">
+            {requestsLoading ? (
+              <div className="borrow-request-empty">
+                <RefreshCw size={28} className="borrow-spin" />
+
+                <h3>Loading requests...</h3>
+
+                <p>Please wait.</p>
+              </div>
+            ) : borrowRequests.length === 0 ? (
+              <div className="borrow-request-empty">
+                <div className="borrow-request-empty-icon">
+                  <CheckCircle2 size={28} />
+                </div>
+
+                <h3>No pending requests</h3>
+
+                <p>There are no new borrow requests from users.</p>
+              </div>
+            ) : (
+              borrowRequests.map((request) => {
+                const book = request?.book;
+
+                const requestUser = request?.user;
+
+                const isProcessing = requestActionId === request.id;
+
+                return (
+                  <article className="borrow-request-card" key={request.id}>
+                    {/* BOOK */}
+
+                    <div className="borrow-request-book-icon">
+                      {book?.coverImage ? (
+                        <img
+                          src={book.coverImage}
+                          alt={getRequestBookTitle(request)}
+                          onError={(event) => {
+                            event.currentTarget.style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <BookOpen size={23} />
+                      )}
+                    </div>
+
+                    {/* INFORMATION */}
+
+                    <div className="borrow-request-main">
+                      <span className="borrow-request-label">
+                        BORROW REQUEST
+                      </span>
+
+                      <h3>{getRequestBookTitle(request)}</h3>
+
+                      <div className="borrow-request-user">
+                        <User size={14} />
+
+                        <span>
+                          Requested by{" "}
+                          <strong>{getRequestUserName(request)}</strong>
+                        </span>
+                      </div>
+
+                      {requestUser?.email && <p>{requestUser.email}</p>}
+                    </div>
+
+                    {/* REQUEST DATE */}
+
+                    <div className="borrow-request-date">
+                      <span>REQUESTED</span>
+
+                      <strong>
+                        {formatDate(request.requestDate || request.createdAt)}
+                      </strong>
+                    </div>
+
+                    {/* STATUS */}
+
+                    <div className="borrow-request-status-wrap">
+                      <span className="borrow-request-status pending">
+                        <Clock3 size={12} />
+                        Pending
+                      </span>
+                    </div>
+
+                    {/* ACTIONS */}
+
+                    <div className="borrow-request-actions">
+                      <button
+                        type="button"
+                        className="borrow-request-approve"
+                        disabled={isProcessing}
+                        onClick={() => handleApproveRequest(request.id)}
+                      >
+                        {isProcessing ? (
+                          <RefreshCw size={14} className="borrow-spin" />
+                        ) : (
+                          <Check size={15} />
+                        )}
+                        Approve
+                      </button>
+
+                      <button
+                        type="button"
+                        className="borrow-request-reject"
+                        disabled={isProcessing}
+                        onClick={() => handleRejectRequest(request.id)}
+                      >
+                        <XCircle size={15} />
+                        Reject
+                      </button>
+                    </div>
+                  </article>
+                );
+              })
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* =================================================
           STAT CARDS
+          
+          EXISTING SECTION
       ================================================= */}
 
       <section className="borrow-stat-grid">
@@ -811,21 +1264,13 @@ export default function BorrowReturn() {
       ================================================= */}
 
       <section className="borrow-list">
-        {/* LIST HEADER */}
-
         <div className="borrow-list-header">
           <span>BOOK & MEMBER</span>
-
           <span>ISSUED</span>
-
           <span>DUE</span>
-
           <span>STATUS</span>
-
           <span>ACTION</span>
         </div>
-
-        {/* LOADING */}
 
         {loading ? (
           <div className="borrow-empty">
@@ -836,8 +1281,6 @@ export default function BorrowReturn() {
             <p>Please wait.</p>
           </div>
         ) : filteredRecords.length === 0 ? (
-          /* EMPTY */
-
           <div className="borrow-empty">
             <div className="borrow-empty-icon">
               <BookOpen size={28} />
@@ -860,12 +1303,8 @@ export default function BorrowReturn() {
             )}
           </div>
         ) : (
-          /* RECORDS */
-
           filteredRecords.map((record) => {
             const book = getBook(record);
-
-            const user = getUser(record);
 
             const bookTitle = getBookTitle(record);
 
@@ -972,6 +1411,8 @@ export default function BorrowReturn() {
 
       {/* =================================================
           ISSUE BOOK MODAL
+          
+          EXISTING MODAL
       ================================================= */}
 
       {showIssueModal && (

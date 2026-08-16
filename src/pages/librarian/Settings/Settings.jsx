@@ -1,17 +1,49 @@
 import { Bell, LockKeyhole, Moon, Save, Sun, UserRound } from "lucide-react";
 
-import { useState } from "react";
-
-import { useTheme } from "../../../context/ThemeContext";
+import { useEffect, useState } from "react";
 
 import "./Settings.css";
 
+const USER_KEY = "pustakalaya_user";
+
+/* =====================================================
+   GET CURRENT USER
+===================================================== */
+
+function getCurrentUser() {
+  try {
+    const storedUser = localStorage.getItem(USER_KEY);
+
+    if (!storedUser) {
+      return null;
+    }
+
+    return JSON.parse(storedUser);
+  } catch (error) {
+    console.error("Unable to read current user:", error);
+
+    return null;
+  }
+}
+
+/* =====================================================
+   SETTINGS
+===================================================== */
+
 function Settings() {
-  const { theme, toggleTheme } = useTheme();
+  const [user, setUser] = useState(null);
+
+  const [loading, setLoading] = useState(true);
+
+  const [error, setError] = useState("");
+
+  const [saved, setSaved] = useState(false);
 
   const [notifications, setNotifications] = useState(true);
 
-  const [saved, setSaved] = useState(false);
+  const [darkMode, setDarkMode] = useState(
+    document.documentElement.classList.contains("dark"),
+  );
 
   const [formData, setFormData] = useState({
     name: "",
@@ -19,27 +51,143 @@ function Settings() {
     phone: "",
   });
 
-  const handleChange = (e) => {
+  /* ===================================================
+     LOAD USER
+  =================================================== */
+
+  useEffect(() => {
+    const currentUser = getCurrentUser();
+
+    if (!currentUser) {
+      setError("Unable to find your account. Please log in again.");
+
+      setLoading(false);
+
+      return;
+    }
+
+    setUser(currentUser);
+
     setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
+      name: currentUser.name || "",
+      email: currentUser.email || "",
+      phone: currentUser.phone || "",
     });
+
+    setLoading(false);
+  }, []);
+
+  /* ===================================================
+     INPUT CHANGE
+  =================================================== */
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
+    setFormData((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
 
     setSaved(false);
   };
 
-  const saveSettings = (e) => {
-    e.preventDefault();
+  /* ===================================================
+     SAVE PROFILE
+  =================================================== */
 
-    setSaved(true);
+  const handleSave = (event) => {
+    event.preventDefault();
 
-    setTimeout(() => {
-      setSaved(false);
-    }, 2500);
+    try {
+      const currentUser = getCurrentUser();
+
+      if (!currentUser) {
+        setError("Unable to find your account. Please log in again.");
+
+        return;
+      }
+
+      const updatedUser = {
+        ...currentUser,
+
+        name: formData.name,
+
+        email: formData.email,
+
+        phone: formData.phone,
+      };
+
+      localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+
+      setUser(updatedUser);
+
+      setSaved(true);
+
+      setError("");
+
+      window.dispatchEvent(new Event("storage"));
+
+      setTimeout(() => {
+        setSaved(false);
+      }, 2500);
+    } catch (error) {
+      console.error("Unable to save settings:", error);
+
+      setError("Unable to save your settings.");
+    }
   };
+
+  /* ===================================================
+     DARK MODE
+  =================================================== */
+
+  const handleThemeChange = () => {
+    const newDarkMode = !darkMode;
+
+    setDarkMode(newDarkMode);
+
+    if (newDarkMode) {
+      document.documentElement.classList.add("dark");
+
+      localStorage.setItem("pustakalaya_theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+
+      localStorage.setItem("pustakalaya_theme", "light");
+    }
+  };
+
+  /* ===================================================
+     LOADING
+  =================================================== */
+
+  if (loading) {
+    return (
+      <div className="lib-settings-page">
+        <div className="lib-page-header">
+          <div>
+            <span>ACCOUNT PREFERENCES</span>
+
+            <h1>Settings</h1>
+
+            <p>Loading your account...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ===================================================
+     PAGE
+  =================================================== */
 
   return (
     <div className="lib-settings-page">
+      {/* =================================================
+          HEADER
+      ================================================= */}
+
       <div className="lib-page-header">
         <div>
           <span>ACCOUNT PREFERENCES</span>
@@ -50,8 +198,20 @@ function Settings() {
         </div>
       </div>
 
+      {/* =================================================
+          ERROR
+      ================================================= */}
+
+      {error && <div className="lib-settings-error">{error}</div>}
+
+      {/* =================================================
+          SETTINGS GRID
+      ================================================= */}
+
       <div className="lib-settings-grid">
-        {/* Profile */}
+        {/* =================================================
+            PROFILE INFORMATION
+        ================================================= */}
 
         <section className="lib-settings-card">
           <div className="lib-settings-heading">
@@ -66,17 +226,22 @@ function Settings() {
             </div>
           </div>
 
-          <form onSubmit={saveSettings}>
+          <form onSubmit={handleSave}>
+            {/* NAME */}
+
             <div className="lib-settings-field">
               <label>Full Name</label>
 
               <input
+                type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                placeholder="Librarian name"
+                placeholder="Enter your full name"
               />
             </div>
+
+            {/* EMAIL */}
 
             <div className="lib-settings-field">
               <label>Email Address</label>
@@ -86,20 +251,25 @@ function Settings() {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="library@college.edu"
+                placeholder="Enter your email"
               />
             </div>
+
+            {/* PHONE */}
 
             <div className="lib-settings-field">
               <label>Phone Number</label>
 
               <input
+                type="tel"
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
-                placeholder="10-digit phone number"
+                placeholder="Enter your phone number"
               />
             </div>
+
+            {/* SAVE */}
 
             <button type="submit" className="lib-settings-save">
               <Save size={15} />
@@ -109,7 +279,9 @@ function Settings() {
           </form>
         </section>
 
-        {/* Preferences */}
+        {/* =================================================
+            PREFERENCES
+        ================================================= */}
 
         <section className="lib-settings-card">
           <div className="lib-settings-heading">
@@ -124,25 +296,33 @@ function Settings() {
             </div>
           </div>
 
-          {/* Theme */}
+          {/* =================================================
+              APPEARANCE
+          ================================================= */}
 
           <div className="lib-setting-option">
             <div className="lib-setting-option-icon">
-              {theme === "light" ? <Sun size={17} /> : <Moon size={17} />}
+              {darkMode ? <Moon size={17} /> : <Sun size={17} />}
             </div>
 
             <div>
               <strong>Appearance</strong>
 
-              <span>{theme === "light" ? "Light mode" : "Dark mode"}</span>
+              <span>{darkMode ? "Dark mode" : "Light mode"}</span>
             </div>
 
-            <button className="lib-setting-action" onClick={toggleTheme}>
+            <button
+              type="button"
+              className="lib-setting-action"
+              onClick={handleThemeChange}
+            >
               Change
             </button>
           </div>
 
-          {/* Notifications */}
+          {/* =================================================
+              NOTIFICATIONS
+          ================================================= */}
 
           <div className="lib-setting-option">
             <div className="lib-setting-option-icon">
@@ -156,14 +336,17 @@ function Settings() {
             </div>
 
             <button
+              type="button"
               className={`lib-toggle ${notifications ? "active" : ""}`}
-              onClick={() => setNotifications(!notifications)}
+              onClick={() => setNotifications((previous) => !previous)}
             >
               <span />
             </button>
           </div>
 
-          {/* Password */}
+          {/* =================================================
+              PASSWORD
+          ================================================= */}
 
           <div className="lib-setting-option">
             <div className="lib-setting-option-icon">
@@ -176,7 +359,15 @@ function Settings() {
               <span>Update your account password</span>
             </div>
 
-            <button className="lib-setting-action">Change</button>
+            <button
+              type="button"
+              className="lib-setting-action"
+              onClick={() => {
+                alert("Password change will be added next.");
+              }}
+            >
+              Change
+            </button>
           </div>
         </section>
       </div>

@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Info,
   Trash2,
+  RefreshCw,
 } from "lucide-react";
 
 import { useEffect, useState } from "react";
@@ -12,125 +13,258 @@ import { useEffect, useState } from "react";
 import Navbar from "../../../components/Navbar/Navbar";
 import Footer from "../../../components/Footer/Footer";
 
+import { useAuth } from "../../../context/AuthContext";
+
 import "./Notifications.css";
 
-const defaultNotifications = [
-  {
-    id: 1,
-    type: "due",
-    title: "Book Due Soon",
-    message:
-      "Your borrowed book is due soon. Please return it before the due date.",
-    date: "13 Aug 2026",
-    read: false,
-  },
-  {
-    id: 2,
-    type: "success",
-    title: "Book Borrowed Successfully",
-    message: "The book has been successfully added to your My Books section.",
-    date: "12 Aug 2026",
-    read: false,
-  },
-  {
-    id: 3,
-    type: "info",
-    title: "New Books Added",
-    message:
-      "New books have been added to the Pustakalaya collection. Explore the latest additions.",
-    date: "10 Aug 2026",
-    read: true,
-  },
-];
+const API_URL =
+  import.meta.env.VITE_API_URL?.replace(/\/$/, "") || "http://localhost:8083";
+
+const NOTIFICATION_API = `${API_URL}/api/notifications`;
+
+/* =====================================================
+   NOTIFICATION TYPE
+===================================================== */
+
+function getNotificationType(notification) {
+  const title = String(notification?.title || "").toLowerCase();
+
+  if (
+    title.includes("approved") ||
+    title.includes("success") ||
+    title.includes("borrowed") ||
+    title.includes("returned")
+  ) {
+    return "success";
+  }
+
+  if (
+    title.includes("rejected") ||
+    title.includes("not available") ||
+    title.includes("overdue") ||
+    title.includes("due")
+  ) {
+    return "due";
+  }
+
+  return "info";
+}
+
+/* =====================================================
+   DATE FORMAT
+===================================================== */
+
+function formatNotificationDate(value) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/* =====================================================
+   COMPONENT
+===================================================== */
 
 function Notifications() {
+  const { user, loading: authLoading } = useAuth();
+
   const [notifications, setNotifications] = useState([]);
+
+  const [loading, setLoading] = useState(true);
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  const [error, setError] = useState("");
 
   /* =====================================================
      LOAD NOTIFICATIONS
   ===================================================== */
 
-  useEffect(() => {
-    const stored = localStorage.getItem("pustakalaya_notifications");
+  const loadNotifications = async (showLoading = true) => {
+    if (!user?.id) {
+      setNotifications([]);
+      setLoading(false);
+      return;
+    }
 
-    if (stored) {
-      try {
-        setNotifications(JSON.parse(stored));
-      } catch {
-        setNotifications(defaultNotifications);
+    try {
+      if (showLoading) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
 
-        localStorage.setItem(
-          "pustakalaya_notifications",
-          JSON.stringify(defaultNotifications),
+      setError("");
+
+      const response = await fetch(`${NOTIFICATION_API}/user/${user.id}`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      const data = await response.json().catch(() => []);
+
+      if (!response.ok) {
+        throw new Error(
+          typeof data === "string"
+            ? data
+            : data?.message || data?.error || "Unable to load notifications.",
         );
       }
-    } else {
-      setNotifications(defaultNotifications);
 
-      localStorage.setItem(
-        "pustakalaya_notifications",
-        JSON.stringify(defaultNotifications),
-      );
+      setNotifications(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Unable to load user notifications:", err);
+
+      setError(err?.message || "Unable to load notifications.");
+
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  }, []);
+  };
 
   /* =====================================================
-     SAVE TO LOCAL STORAGE
+     LOAD AFTER LOGIN SESSION IS READY
   ===================================================== */
 
-  const saveNotifications = (updatedNotifications) => {
-    setNotifications(updatedNotifications);
+  useEffect(() => {
+    if (authLoading) {
+      return;
+    }
 
-    localStorage.setItem(
-      "pustakalaya_notifications",
-      JSON.stringify(updatedNotifications),
-    );
-  };
+    if (!user?.id) {
+      setNotifications([]);
+      setLoading(false);
+      return;
+    }
+
+    loadNotifications();
+  }, [user?.id, authLoading]);
 
   /* =====================================================
      MARK ONE AS READ
   ===================================================== */
 
-  const markAsRead = (id) => {
-    const updated = notifications.map((notification) =>
-      notification.id === id
-        ? {
-            ...notification,
-            read: true,
-          }
-        : notification,
-    );
+  const markAsRead = async (id) => {
+    if (!id) {
+      return;
+    }
 
-    saveNotifications(updated);
+    try {
+      setError("");
+
+      const response = await fetch(`${NOTIFICATION_API}/${id}/read`, {
+        method: "PUT",
+        credentials: "include",
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          typeof data === "string"
+            ? data
+            : data?.message ||
+                data?.error ||
+                "Unable to mark notification as read.",
+        );
+      }
+
+      setNotifications((previous) =>
+        previous.map((notification) =>
+          notification.id === id
+            ? {
+                ...notification,
+                read: true,
+              }
+            : notification,
+        ),
+      );
+    } catch (err) {
+      console.error("Mark notification as read error:", err);
+
+      setError(err?.message || "Unable to mark notification as read.");
+    }
   };
 
   /* =====================================================
      MARK ALL AS READ
+     
+     Backend currently only provides:
+     
+     PUT /api/notifications/{id}/read
+     
+     So we use that existing endpoint for
+     each unread notification.
   ===================================================== */
 
-  const markAllAsRead = () => {
-    const updated = notifications.map((notification) => ({
-      ...notification,
-      read: true,
-    }));
+  const markAllAsRead = async () => {
+    const unread = notifications.filter((notification) => !notification.read);
 
-    saveNotifications(updated);
+    if (unread.length === 0) {
+      return;
+    }
+
+    try {
+      setError("");
+
+      await Promise.all(
+        unread.map((notification) =>
+          fetch(`${NOTIFICATION_API}/${notification.id}/read`, {
+            method: "PUT",
+            credentials: "include",
+          }),
+        ),
+      );
+
+      setNotifications((previous) =>
+        previous.map((notification) => ({
+          ...notification,
+          read: true,
+        })),
+      );
+    } catch (err) {
+      console.error("Mark all notifications error:", err);
+
+      setError("Unable to mark all notifications as read.");
+
+      await loadNotifications(false);
+    }
   };
 
   /* =====================================================
-     DELETE NOTIFICATION
+     DELETE ONE
+     
+     Backend does not currently have a DELETE
+     notification endpoint.
+     
+     Therefore this removes it only from the
+     current UI.
   ===================================================== */
 
   const deleteNotification = (id) => {
-    const updated = notifications.filter(
-      (notification) => notification.id !== id,
+    setNotifications((previous) =>
+      previous.filter((notification) => notification.id !== id),
     );
-
-    saveNotifications(updated);
   };
 
   /* =====================================================
      CLEAR ALL
+     
+     Same reason as above:
+     no DELETE endpoint exists yet.
   ===================================================== */
 
   const clearAll = () => {
@@ -146,15 +280,7 @@ function Notifications() {
       return;
     }
 
-    saveNotifications([]);
-  };
-
-  /* =====================================================
-     RESTORE DEMO NOTIFICATIONS
-  ===================================================== */
-
-  const restoreNotifications = () => {
-    saveNotifications(defaultNotifications);
+    setNotifications([]);
   };
 
   /* =====================================================
@@ -174,9 +300,111 @@ function Notifications() {
     }
   };
 
+  /* =====================================================
+     UNREAD COUNT
+  ===================================================== */
+
   const unreadCount = notifications.filter(
     (notification) => !notification.read,
   ).length;
+
+  /* =====================================================
+     AUTH LOADING
+  ===================================================== */
+
+  if (authLoading || loading) {
+    return (
+      <div className="notifications-page">
+        <Navbar />
+
+        <main className="notifications-main">
+          <div className="notifications-container">
+            <section className="notifications-header">
+              <div className="notifications-heading">
+                <span className="notifications-label">LIBRARY UPDATES</span>
+
+                <h1>
+                  Your
+                  <em> Notifications.</em>
+                </h1>
+
+                <p>
+                  Stay updated with your books, library activity and important
+                  reminders.
+                </p>
+              </div>
+
+              <div className="notifications-header-icon">
+                <Bell size={30} />
+              </div>
+            </section>
+
+            <section className="notifications-empty">
+              <RefreshCw size={28} className="notification-spin" />
+
+              <h2>Loading Notifications</h2>
+
+              <p>Please wait while we load your notifications.</p>
+            </section>
+          </div>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
+
+  /* =====================================================
+     NOT LOGGED IN
+  ===================================================== */
+
+  if (!user?.id) {
+    return (
+      <div className="notifications-page">
+        <Navbar />
+
+        <main className="notifications-main">
+          <div className="notifications-container">
+            <section className="notifications-header">
+              <div className="notifications-heading">
+                <span className="notifications-label">LIBRARY UPDATES</span>
+
+                <h1>
+                  Your
+                  <em> Notifications.</em>
+                </h1>
+
+                <p>
+                  Stay updated with your books, library activity and important
+                  reminders.
+                </p>
+              </div>
+
+              <div className="notifications-header-icon">
+                <Bell size={30} />
+              </div>
+            </section>
+
+            <section className="notifications-empty">
+              <div className="notifications-empty-icon">
+                <Bell size={26} />
+              </div>
+
+              <h2>Login Required</h2>
+
+              <p>Please login to view your notifications.</p>
+            </section>
+          </div>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
+
+  /* =====================================================
+     MAIN UI
+  ===================================================== */
 
   return (
     <div className="notifications-page">
@@ -209,6 +437,25 @@ function Notifications() {
           </section>
 
           {/* =================================================
+              ERROR
+          ================================================= */}
+
+          {error && (
+            <div
+              style={{
+                marginBottom: "18px",
+                padding: "12px 16px",
+                borderRadius: "10px",
+                background: "rgba(220, 38, 38, 0.08)",
+                color: "#dc2626",
+                fontSize: "14px",
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          {/* =================================================
               TOOLBAR
           ================================================= */}
 
@@ -229,6 +476,23 @@ function Notifications() {
             </div>
 
             <div className="notifications-actions">
+              {/* REFRESH */}
+
+              <button
+                type="button"
+                className="notifications-read-all"
+                onClick={() => loadNotifications(false)}
+                disabled={refreshing}
+              >
+                <RefreshCw
+                  size={14}
+                  className={refreshing ? "notification-spin" : ""}
+                />
+                Refresh
+              </button>
+
+              {/* MARK ALL READ */}
+
               {unreadCount > 0 && (
                 <button
                   type="button"
@@ -239,6 +503,8 @@ function Notifications() {
                   Mark All Read
                 </button>
               )}
+
+              {/* CLEAR ALL */}
 
               {notifications.length > 0 && (
                 <button
@@ -259,64 +525,68 @@ function Notifications() {
 
           {notifications.length > 0 ? (
             <section className="notifications-list">
-              {notifications.map((notification) => (
-                <article
-                  key={notification.id}
-                  className={`notification-card ${
-                    !notification.read ? "notification-unread" : ""
-                  }`}
-                >
-                  {/* ICON */}
+              {notifications.map((notification) => {
+                const type = getNotificationType(notification);
 
-                  <div
-                    className={`notification-icon notification-icon-${notification.type}`}
+                return (
+                  <article
+                    key={notification.id}
+                    className={`notification-card ${
+                      !notification.read ? "notification-unread" : ""
+                    }`}
                   >
-                    {getIcon(notification.type)}
-                  </div>
+                    {/* ICON */}
 
-                  {/* CONTENT */}
-
-                  <div className="notification-content">
-                    <div className="notification-title-row">
-                      <h3>{notification.title}</h3>
-
-                      {!notification.read && (
-                        <span className="notification-new">NEW</span>
-                      )}
+                    <div
+                      className={`notification-icon notification-icon-${type}`}
+                    >
+                      {getIcon(type)}
                     </div>
 
-                    <p>{notification.message}</p>
+                    {/* CONTENT */}
 
-                    <span className="notification-date">
-                      {notification.date}
-                    </span>
-                  </div>
+                    <div className="notification-content">
+                      <div className="notification-title-row">
+                        <h3>{notification.title}</h3>
 
-                  {/* ACTIONS */}
+                        {!notification.read && (
+                          <span className="notification-new">NEW</span>
+                        )}
+                      </div>
 
-                  <div className="notification-card-actions">
-                    {!notification.read && (
+                      <p>{notification.message}</p>
+
+                      <span className="notification-date">
+                        {formatNotificationDate(notification.createdAt)}
+                      </span>
+                    </div>
+
+                    {/* ACTIONS */}
+
+                    <div className="notification-card-actions">
+                      {!notification.read && (
+                        <button
+                          type="button"
+                          className="notification-check-btn"
+                          onClick={() => markAsRead(notification.id)}
+                          title="Mark as read"
+                        >
+                          <Check size={15} />
+                        </button>
+                      )}
+
                       <button
                         type="button"
-                        className="notification-check-btn"
-                        onClick={() => markAsRead(notification.id)}
-                        title="Mark as read"
+                        className="notification-delete-btn"
+                        onClick={() => deleteNotification(notification.id)}
+                        title="Remove notification"
                       >
-                        <Check size={15} />
+                        <Trash2 size={15} />
                       </button>
-                    )}
-
-                    <button
-                      type="button"
-                      className="notification-delete-btn"
-                      onClick={() => deleteNotification(notification.id)}
-                      title="Delete notification"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </article>
-              ))}
+                    </div>
+                  </article>
+                );
+              })}
             </section>
           ) : (
             /* =================================================
@@ -335,13 +605,14 @@ function Notifications() {
                 will appear here.
               </p>
 
-              <button
-                type="button"
-                className="notifications-restore-btn"
-                onClick={restoreNotifications}
-              >
-                Restore Sample Notifications
-              </button>
+              {/* 
+                 IMPORTANT:
+                 Removed "Restore Sample Notifications".
+                 
+                 Notifications now come from
+                 the database, so we should not
+                 create fake/local notifications.
+              */}
             </section>
           )}
         </div>

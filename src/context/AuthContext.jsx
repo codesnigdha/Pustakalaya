@@ -7,14 +7,10 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
 
-  /*
-   * true while we are checking the Spring Boot
-   * session after page load / refresh.
-   */
   const [loading, setLoading] = useState(true);
 
   /* =====================================================
-     CHECK EXISTING LOGIN SESSION
+     CHECK EXISTING SESSION
   ===================================================== */
 
   useEffect(() => {
@@ -22,30 +18,12 @@ export function AuthProvider({ children }) {
 
     const checkSession = async () => {
       try {
-        /*
-         * IMPORTANT:
-         *
-         * getCurrentUser() calls:
-         *
-         * GET /api/auth/me
-         *
-         * We MUST await it.
-         */
         const currentUser = await getCurrentUser();
 
         if (!mounted) {
           return;
         }
 
-        /*
-         * If Spring Boot session exists:
-         *
-         * currentUser = actual logged-in user
-         *
-         * If session doesn't exist:
-         *
-         * currentUser = null
-         */
         setUser(currentUser);
       } catch (error) {
         console.error("Authentication check failed:", error);
@@ -54,9 +32,6 @@ export function AuthProvider({ children }) {
           setUser(null);
         }
       } finally {
-        /*
-         * Authentication check is finished.
-         */
         if (mounted) {
           setLoading(false);
         }
@@ -65,10 +40,6 @@ export function AuthProvider({ children }) {
 
     checkSession();
 
-    /*
-     * Prevent state updates if the component
-     * is unmounted while the request is running.
-     */
     return () => {
       mounted = false;
     };
@@ -79,12 +50,11 @@ export function AuthProvider({ children }) {
   ===================================================== */
 
   const login = (loggedInUser) => {
-    /*
-     * Store the user in React state.
-     *
-     * The actual session is maintained by
-     * Spring Boot through the session cookie.
-     */
+    if (!loggedInUser) {
+      setUser(null);
+      return;
+    }
+
     setUser(loggedInUser);
   };
 
@@ -94,17 +64,10 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      /*
-       * Tell Spring Boot to invalidate the session.
-       */
       await logoutUser();
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
-      /*
-       * Always clear the frontend state,
-       * even if the backend request fails.
-       */
       setUser(null);
     }
   };
@@ -113,23 +76,29 @@ export function AuthProvider({ children }) {
      AUTHENTICATION STATUS
   ===================================================== */
 
-  /*
-   * Do NOT consider the user authenticated while
-   * the initial session check is still running.
-   */
   const isAuthenticated = !loading && Boolean(user);
 
   /* =====================================================
      ROLE CHECKS
   ===================================================== */
 
-  const isAdmin = user?.role === "ADMIN";
+  const normalizeRole = (role) => {
+    if (!role) {
+      return "";
+    }
 
-  const isLibrarian = user?.role === "LIBRARIAN";
+    return String(role).trim().toUpperCase().replace("ROLE_", "");
+  };
 
-  const isStudent = user?.role === "STUDENT";
+  const currentRole = normalizeRole(user?.role);
 
-  const isTeacher = user?.role === "TEACHER";
+  const isAdmin = currentRole === "ADMIN";
+
+  const isLibrarian = currentRole === "LIBRARIAN";
+
+  const isStudent = currentRole === "STUDENT";
+
+  const isTeacher = currentRole === "TEACHER";
 
   /* =====================================================
      PROVIDER
@@ -139,21 +108,18 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         user,
+        setUser,
 
         loading,
 
         login,
-
         logout,
 
         isAuthenticated,
 
         isAdmin,
-
         isLibrarian,
-
         isStudent,
-
         isTeacher,
       }}
     >

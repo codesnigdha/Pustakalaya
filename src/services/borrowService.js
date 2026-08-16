@@ -4,110 +4,223 @@ import axios from "axios";
    API CONFIGURATION
 ===================================================== */
 
-const API_URL = "http://localhost:8083/api/borrow";
+const API_URL =
+  import.meta.env.VITE_API_URL?.replace(/\/$/, "") || "http://localhost:8083";
+
+const BORROW_URL = `${API_URL}/api/borrow`;
+
+/*
+ * IMPORTANT
+ *
+ * Pustakalaya uses Spring Boot HTTP Session.
+ *
+ * withCredentials: true makes sure that the browser
+ * sends the JSESSIONID cookie with the request.
+ */
+
+const api = axios.create({
+  baseURL: BORROW_URL,
+  withCredentials: true,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+/* =====================================================
+   ERROR HANDLER
+===================================================== */
+
+function getApiError(error, fallbackMessage) {
+  const data = error?.response?.data;
+
+  /* ---------------------------------------------------
+     Backend returns plain text
+  --------------------------------------------------- */
+
+  if (typeof data === "string" && data.trim()) {
+    return data.trim();
+  }
+
+  /* ---------------------------------------------------
+     Backend returns { message: "..." }
+  --------------------------------------------------- */
+
+  if (data?.message) {
+    return data.message;
+  }
+
+  /* ---------------------------------------------------
+     Backend returns { error: "..." }
+  --------------------------------------------------- */
+
+  if (data?.error) {
+    return data.error;
+  }
+
+  /* ---------------------------------------------------
+     HTTP STATUS
+  --------------------------------------------------- */
+
+  if (error?.response?.status === 400) {
+    return "Unable to process the borrow request.";
+  }
+
+  if (error?.response?.status === 401) {
+    return "Please log in before borrowing a book.";
+  }
+
+  if (error?.response?.status === 403) {
+    return "You do not have permission to borrow this book.";
+  }
+
+  if (error?.response?.status === 404) {
+    return "The book or user could not be found.";
+  }
+
+  if (error?.response?.status === 409) {
+    return "This book is currently unavailable.";
+  }
+
+  /* ---------------------------------------------------
+     Axios error
+  --------------------------------------------------- */
+
+  if (error?.message) {
+    return error.message;
+  }
+
+  return fallbackMessage;
+}
 
 /* =====================================================
    BORROW BOOK
+   POST /api/borrow/borrow
 ===================================================== */
 
 export async function borrowBook(userId, bookId) {
   try {
-    const response = await axios.post(`${API_URL}/borrow`, {
-      userId,
-      bookId,
+    /* -------------------------------------------------
+       VALIDATION
+    ------------------------------------------------- */
+
+    if (!userId) {
+      throw new Error("User ID is required.");
+    }
+
+    if (!bookId) {
+      throw new Error("Book ID is required.");
+    }
+
+    /* -------------------------------------------------
+       REQUEST
+    ------------------------------------------------- */
+
+    const response = await api.post("/borrow", {
+      userId: Number(userId),
+      bookId: Number(bookId),
     });
 
     return response.data;
   } catch (error) {
-    console.error("Borrow book error:", error);
-
-    throw new Error(
-      error.response?.data?.message ||
-        error.response?.data ||
-        "Unable to borrow book.",
+    console.error(
+      "POST /api/borrow/borrow failed:",
+      error?.response?.data || error,
     );
+
+    throw new Error(getApiError(error, "Unable to borrow book."));
   }
 }
 
 /* =====================================================
    RETURN BOOK
+   PUT /api/borrow/return/{borrowId}
 ===================================================== */
 
 export async function returnBook(borrowId) {
   try {
-    const response = await axios.put(`${API_URL}/return/${borrowId}`);
+    if (!borrowId) {
+      throw new Error("Borrow ID is required.");
+    }
+
+    const response = await api.put(`/return/${borrowId}`);
 
     return response.data;
   } catch (error) {
-    console.error("Return book error:", error);
-
-    throw new Error(
-      error.response?.data?.message ||
-        error.response?.data ||
-        "Unable to return book.",
+    console.error(
+      "PUT /api/borrow/return failed:",
+      error?.response?.data || error,
     );
+
+    throw new Error(getApiError(error, "Unable to return book."));
   }
 }
 
 /* =====================================================
    GET USER BORROWED BOOKS
+   GET /api/borrow/user/{userId}
 ===================================================== */
 
 export async function getUserBorrowedBooks(userId) {
   try {
-    const response = await axios.get(`${API_URL}/user/${userId}`);
+    if (!userId) {
+      throw new Error("User ID is required.");
+    }
 
-    return response.data;
+    const response = await api.get(`/user/${userId}`);
+
+    return Array.isArray(response.data) ? response.data : [];
   } catch (error) {
-    console.error("Get user borrowed books error:", error);
-
-    throw new Error(
-      error.response?.data?.message ||
-        error.response?.data ||
-        "Unable to load borrowed books.",
+    console.error(
+      "GET /api/borrow/user failed:",
+      error?.response?.data || error,
     );
+
+    throw new Error(getApiError(error, "Unable to load borrowed books."));
   }
 }
 
 /* =====================================================
    GET ACTIVE BORROWS
-   Used by:
-   - Librarian
-   - Borrow management
+   GET /api/borrow/active
 ===================================================== */
 
 export async function getActiveBorrows() {
   try {
-    const response = await axios.get(`${API_URL}/active`);
+    const response = await api.get("/active");
 
-    return response.data;
+    return Array.isArray(response.data) ? response.data : [];
   } catch (error) {
-    console.error("Get active borrows error:", error);
+    console.error(
+      "GET /api/borrow/active failed:",
+      error?.response?.data || error,
+    );
 
     throw new Error(
-      error.response?.data?.message ||
-        error.response?.data ||
-        "Unable to load active borrow records.",
+      getApiError(error, "Unable to load active borrow records."),
     );
   }
 }
 
 /* =====================================================
    GET BORROW HISTORY
+   GET /api/borrow/history/{userId}
 ===================================================== */
 
 export async function getBorrowHistory(userId) {
   try {
-    const response = await axios.get(`${API_URL}/history/${userId}`);
+    if (!userId) {
+      throw new Error("User ID is required.");
+    }
 
-    return response.data;
+    const response = await api.get(`/history/${userId}`);
+
+    return Array.isArray(response.data) ? response.data : [];
   } catch (error) {
-    console.error("Get borrow history error:", error);
-
-    throw new Error(
-      error.response?.data?.message ||
-        error.response?.data ||
-        "Unable to load borrow history.",
+    console.error(
+      "GET /api/borrow/history failed:",
+      error?.response?.data || error,
     );
+
+    throw new Error(getApiError(error, "Unable to load borrow history."));
   }
 }

@@ -103,15 +103,6 @@ function Login() {
     ================================================= */
 
     try {
-      /*
-       * loginUser expects ONE object:
-       *
-       * {
-       *   email: "...",
-       *   password: "..."
-       * }
-       */
-
       const user = await loginUser({
         email: email,
         password: password,
@@ -129,27 +120,45 @@ function Login() {
 
       /* =================================================
          ROLE-BASED REDIRECT
+         
+         IMPORTANT:
+         Role is checked BEFORE location.state.from.
+         
+         This prevents a librarian from being sent
+         to the user dashboard.
       ================================================= */
 
       setTimeout(() => {
-        /*
-         * If ProtectedRoute originally sent the user
-         * to login, return them to that page.
-         */
-        const from = location.state?.from;
+        /* ---------------------------------------------
+           NORMALIZE ROLE
+           
+           Supports both:
+           
+           LIBRARIAN
+           ROLE_LIBRARIAN
+           
+           STUDENT
+           ROLE_STUDENT
+           
+           TEACHER
+           ROLE_TEACHER
+           
+           ADMIN
+           ROLE_ADMIN
+        --------------------------------------------- */
 
-        if (from) {
-          navigate(from, {
-            replace: true,
-          });
+        const role = String(user?.role || "")
+          .trim()
+          .toUpperCase()
+          .replace(/^ROLE_/, "");
 
-          return;
-        }
+        console.log("Logged-in user role:", role);
 
-        /*
-         * LIBRARIAN
-         */
-        if (user.role === "LIBRARIAN") {
+        /* =================================================
+           LIBRARIAN
+        ================================================= */
+
+        if (role === "LIBRARIAN") {
           navigate("/librarian/dashboard", {
             replace: true,
           });
@@ -157,10 +166,39 @@ function Login() {
           return;
         }
 
-        /*
-         * STUDENT
-         */
-        if (user.role === "STUDENT") {
+        /* =================================================
+           ADMIN
+           
+           Keep this only if your application has an
+           admin dashboard.
+        ================================================= */
+
+        if (role === "ADMIN") {
+          navigate("/admin/dashboard", {
+            replace: true,
+          });
+
+          return;
+        }
+
+        /* =================================================
+           STUDENT
+           
+           Only students can use the previous protected
+           destination.
+        ================================================= */
+
+        if (role === "STUDENT") {
+          const from = location.state?.from;
+
+          if (from) {
+            navigate(from, {
+              replace: true,
+            });
+
+            return;
+          }
+
           navigate("/dashboard", {
             replace: true,
           });
@@ -168,10 +206,21 @@ function Login() {
           return;
         }
 
-        /*
-         * TEACHER
-         */
-        if (user.role === "TEACHER") {
+        /* =================================================
+           TEACHER
+        ================================================= */
+
+        if (role === "TEACHER") {
+          const from = location.state?.from;
+
+          if (from) {
+            navigate(from, {
+              replace: true,
+            });
+
+            return;
+          }
+
           navigate("/dashboard", {
             replace: true,
           });
@@ -179,10 +228,11 @@ function Login() {
           return;
         }
 
-        /*
-         * Unknown role
-         */
-        console.error("Unknown user role:", user.role);
+        /* =================================================
+           UNKNOWN ROLE
+        ================================================= */
+
+        console.error("Unknown user role:", user?.role);
 
         navigate("/", {
           replace: true,

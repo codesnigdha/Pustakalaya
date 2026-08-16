@@ -22,53 +22,34 @@ import Navbar from "../../../components/Navbar/Navbar";
 import Footer from "../../../components/Footer/Footer";
 
 import { getBookById } from "../../../services/bookService";
-import { borrowBook } from "../../../services/borrowService";
+
+/*
+ * IMPORTANT:
+ *
+ * Borrowing is now a REQUEST.
+ *
+ * DO NOT import createBorrowRequest
+ * from borrowService.
+ *
+ * It belongs to borrowRequestService.
+ */
+import { createBorrowRequest } from "../../../services/borrowRequestService";
+
+import {
+  isBookInWishlist,
+  toggleWishlist as toggleWishlistApi,
+} from "../../../services/wishlistService";
+
+import { useAuth } from "../../../context/AuthContext";
 
 import "./BookDetails.css";
-
-const WISHLIST_KEY = "pustakalaya_wishlist";
-const USER_KEY = "pustakalaya_user";
 
 const DEFAULT_COVER =
   "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=700&q=80";
 
-/* =========================
-   WISHLIST
-========================= */
-
-function getWishlistIds() {
-  try {
-    const stored = localStorage.getItem(WISHLIST_KEY);
-
-    if (!stored) {
-      return [];
-    }
-
-    const parsed = JSON.parse(stored);
-
-    return Array.isArray(parsed) ? parsed.map(Number) : [];
-  } catch {
-    return [];
-  }
-}
-
-/* =========================
-   USER
-========================= */
-
-function getCurrentUser() {
-  try {
-    const stored = localStorage.getItem(USER_KEY);
-
-    return stored ? JSON.parse(stored) : null;
-  } catch {
-    return null;
-  }
-}
-
-/* =========================
+/* =====================================================
    CATEGORY
-========================= */
+===================================================== */
 
 function getCategoryName(book) {
   if (!book) {
@@ -82,23 +63,23 @@ function getCategoryName(book) {
   return String(book.category || "General");
 }
 
-/* =========================
+/* =====================================================
    COVER
-========================= */
+===================================================== */
 
 function getCoverImage(book) {
   return book?.coverImage || DEFAULT_COVER;
 }
 
-/* =========================
-   ERROR
-========================= */
+/* =====================================================
+   API ERROR
+===================================================== */
 
 function getApiError(error, fallback) {
   const data = error?.response?.data;
 
   if (typeof data === "string" && data.trim()) {
-    return data;
+    return data.trim();
   }
 
   if (data?.message) {
@@ -112,36 +93,78 @@ function getApiError(error, fallback) {
   return error?.message || fallback;
 }
 
-/* =========================
+/* =====================================================
    COMPONENT
-========================= */
+===================================================== */
 
 function BookDetails() {
   const { id } = useParams();
 
   const navigate = useNavigate();
 
+  /*
+   * IMPORTANT:
+   *
+   * Authentication now comes from AuthContext.
+   *
+   * Do NOT use localStorage to decide whether
+   * the user is logged in.
+   */
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+
+  /* ===================================================
+     BOOK
+  =================================================== */
+
   const [book, setBook] = useState(null);
+
+  /* ===================================================
+     LOADING
+  =================================================== */
 
   const [loading, setLoading] = useState(true);
 
+  /* ===================================================
+     PAGE ERROR
+  =================================================== */
+
   const [pageError, setPageError] = useState("");
 
-  const [wishlist, setWishlist] = useState(() =>
-    getWishlistIds().includes(Number(id)),
-  );
+  /* ===================================================
+     WISHLIST
+  =================================================== */
+
+  const [wishlist, setWishlist] = useState(false);
+
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+
+  /* ===================================================
+     ACTION LOADING
+  =================================================== */
 
   const [actionLoading, setActionLoading] = useState(false);
 
+  /* ===================================================
+     ACTION MESSAGE
+  =================================================== */
+
   const [actionMessage, setActionMessage] = useState("");
+
+  /* ===================================================
+     ACTION ERROR
+  =================================================== */
 
   const [actionError, setActionError] = useState("");
 
+  /* ===================================================
+     LOGIN MODAL
+  =================================================== */
+
   const [showLoginModal, setShowLoginModal] = useState(false);
 
-  /* =========================
+  /* ===================================================
      LOAD BOOK
-  ========================= */
+  =================================================== */
 
   useEffect(() => {
     let mounted = true;
@@ -151,15 +174,45 @@ function BookDetails() {
         setLoading(true);
 
         setPageError("");
+
         setActionMessage("");
+
         setActionError("");
 
         const data = await getBookById(id);
 
-        if (mounted) {
-          setBook(data);
+        if (!mounted) {
+          return;
+        }
 
-          setWishlist(getWishlistIds().includes(Number(id)));
+        setBook(data);
+
+        /*
+         * -------------------------------------------------
+         * LOAD WISHLIST STATUS
+         * -------------------------------------------------
+         *
+         * Only check wishlist if the user is logged in.
+         *
+         * This does NOT affect public book browsing.
+         */
+
+        if (user?.id) {
+          try {
+            const isSaved = await isBookInWishlist(user.id, Number(id));
+
+            if (mounted) {
+              setWishlist(isSaved);
+            }
+          } catch (wishlistError) {
+            console.error("Wishlist status error:", wishlistError);
+
+            if (mounted) {
+              setWishlist(false);
+            }
+          }
+        } else {
+          setWishlist(false);
         }
       } catch (error) {
         console.error("Book details error:", error);
@@ -185,11 +238,11 @@ function BookDetails() {
     return () => {
       mounted = false;
     };
-  }, [id]);
+  }, [id, user?.id]);
 
-  /* =========================
+  /* ===================================================
      BOOK DATA
-  ========================= */
+  =================================================== */
 
   const availableCopies = Number(book?.availableCopies ?? 0);
 
@@ -203,108 +256,190 @@ function BookDetails() {
 
   const publicationYear = book?.publicationYear ?? "—";
 
-  /* =========================
+  /* ===================================================
      WISHLIST
-  ========================= */
+  =================================================== */
 
-  const toggleWishlist = () => {
+  const toggleWishlist = async () => {
+    /*
+     * -------------------------------------------------
+     * LOGIN CHECK
+     * -------------------------------------------------
+     *
+     * Use AuthContext instead of localStorage.
+     */
+
+    if (authLoading) {
+      return;
+    }
+
+    if (!isAuthenticated || !user?.id) {
+      setActionMessage("");
+
+      setActionError("");
+
+      setShowLoginModal(true);
+
+      return;
+    }
+
     const bookId = Number(id);
 
-    const currentIds = getWishlistIds();
+    if (!bookId || wishlistLoading) {
+      return;
+    }
 
-    const nextIds = currentIds.includes(bookId)
-      ? currentIds.filter((item) => item !== bookId)
-      : [...currentIds, bookId];
+    try {
+      setWishlistLoading(true);
 
-    localStorage.setItem(WISHLIST_KEY, JSON.stringify(nextIds));
+      setActionMessage("");
 
-    setWishlist(nextIds.includes(bookId));
+      setActionError("");
+
+      const added = await toggleWishlistApi(user.id, bookId);
+
+      setWishlist(added);
+
+      setActionMessage(
+        added
+          ? "Book added to your wishlist."
+          : "Book removed from your wishlist.",
+      );
+    } catch (error) {
+      console.error("Wishlist update error:", error);
+
+      setActionError(error?.message || "Unable to update wishlist.");
+    } finally {
+      setWishlistLoading(false);
+    }
   };
 
-  /* =========================
-     USER ID
-  ========================= */
-
-  const getUserId = () => {
-    const user = getCurrentUser();
-
-    return user?.id ?? user?.userId ?? null;
-  };
-
-  /* =========================
-     BORROW
-  ========================= */
+  /* ===================================================
+     BORROW REQUEST
+  =================================================== */
 
   const handleBorrow = async () => {
-    const user = getCurrentUser();
+    /*
+     * =================================================
+     * WAIT FOR AUTH CHECK
+     * =================================================
+     *
+     * AuthContext checks the Spring Boot session
+     * when the application starts.
+     *
+     * Do not make an authentication decision
+     * while that check is still running.
+     */
 
-    /* -------------------------
+    if (authLoading) {
+      return;
+    }
+
+    /* =================================================
        LOGIN CHECK
-    ------------------------- */
+    ================================================= */
 
-    if (!user) {
+    if (!isAuthenticated || !user?.id) {
+      setActionMessage("");
+
+      setActionError("");
+
       setShowLoginModal(true);
-      return;
-    }
-
-    /* -------------------------
-       GET USER ID
-    ------------------------- */
-
-    const userId = getUserId();
-
-    if (!userId) {
-      setActionError("Unable to identify your account. Please log in again.");
 
       return;
     }
 
-    /* -------------------------
-       BORROW BOOK
-    ------------------------- */
+    /* =================================================
+       BOOK ID CHECK
+    ================================================= */
+
+    const bookId = Number(id);
+
+    if (!bookId) {
+      setActionError("Invalid book ID.");
+
+      return;
+    }
+
+    /* =================================================
+       SEND BORROW REQUEST
+    ================================================= */
 
     try {
       setActionLoading(true);
 
       setActionMessage("");
+
       setActionError("");
 
-      const response = await borrowBook(userId, Number(id));
+      /*
+       * IMPORTANT:
+       *
+       * We only send bookId.
+       *
+       * The backend gets the logged-in user
+       * from the Spring Boot HTTP session.
+       *
+       * POST:
+       *
+       * /api/borrow-requests
+       *
+       * Body:
+       *
+       * {
+       *   "bookId": 15
+       * }
+       *
+       * This creates a PENDING request.
+       *
+       * It does NOT immediately borrow the book.
+       */
 
-      /* -------------------------
-         SUCCESS MESSAGE
-      ------------------------- */
+      await createBorrowRequest(bookId);
 
-      setActionMessage(response?.message || "Book borrowed successfully.");
+      /* -----------------------------------------------
+         SUCCESS
+      ----------------------------------------------- */
 
-      /* -------------------------
-         UPDATE AVAILABLE COPIES
-      ------------------------- */
-
-      setBook((previous) => {
-        if (!previous) {
-          return previous;
-        }
-
-        const current = Number(previous.availableCopies ?? 0);
-
-        return {
-          ...previous,
-          availableCopies: Math.max(current - 1, 0),
-        };
-      });
+      setActionMessage(
+        "Borrow request sent successfully. The librarian will review your request.",
+      );
     } catch (error) {
-      console.error("Borrow book error:", error);
+      console.error("Borrow request error:", error);
 
-      setActionError(error?.message || "Unable to borrow this book.");
+      /*
+       * The borrowRequestService converts
+       * backend errors into Error messages.
+       *
+       * Therefore use error.message here.
+       */
+
+      const message = error?.message || "Unable to send borrow request.";
+
+      /*
+       * If the session has expired,
+       * show login modal.
+       */
+
+      if (
+        message.toLowerCase().includes("login") ||
+        message.toLowerCase().includes("session") ||
+        message.toLowerCase().includes("unauthorized")
+      ) {
+        setShowLoginModal(true);
+
+        return;
+      }
+
+      setActionError(message);
     } finally {
       setActionLoading(false);
     }
   };
 
-  /* =========================
+  /* ===================================================
      LOADING
-  ========================= */
+  =================================================== */
 
   if (loading) {
     return (
@@ -324,9 +459,9 @@ function BookDetails() {
     );
   }
 
-  /* =========================
+  /* ===================================================
      ERROR
-  ========================= */
+  =================================================== */
 
   if (pageError || !book) {
     return (
@@ -353,15 +488,17 @@ function BookDetails() {
     );
   }
 
-  /* =========================
+  /* ===================================================
      MAIN
-  ========================= */
+  =================================================== */
 
   return (
     <div className="book-details-page">
       <Navbar />
 
-      {/* BREADCRUMB */}
+      {/* =================================================
+          BREADCRUMB
+      ================================================= */}
 
       <div className="book-details-breadcrumb">
         <div className="book-details-container">
@@ -380,12 +517,16 @@ function BookDetails() {
         </div>
       </div>
 
-      {/* MAIN */}
+      {/* =================================================
+          MAIN
+      ================================================= */}
 
       <main className="book-details-main">
         <div className="book-details-container">
           <div className="book-details-layout">
-            {/* COVER */}
+            {/* =================================================
+                COVER
+            ================================================= */}
 
             <div className="book-details-cover-section">
               <div className="book-details-cover">
@@ -421,7 +562,9 @@ function BookDetails() {
               </div>
             </div>
 
-            {/* CONTENT */}
+            {/* =================================================
+                CONTENT
+            ================================================= */}
 
             <div className="book-details-content">
               <span className="book-details-category">{categoryName}</span>
@@ -432,7 +575,9 @@ function BookDetails() {
                 by <strong>{book.author || "Unknown Author"}</strong>
               </p>
 
-              {/* RATING */}
+              {/* =================================================
+                  RATING
+              ================================================= */}
 
               <div className="book-details-rating">
                 <div className="rating-stars">
@@ -444,14 +589,18 @@ function BookDetails() {
                 <span>Library catalogue rating</span>
               </div>
 
-              {/* DESCRIPTION */}
+              {/* =================================================
+                  DESCRIPTION
+              ================================================= */}
 
               <p className="book-details-description">
                 {book.description ||
                   "No description is available for this book yet."}
               </p>
 
-              {/* ACTIONS */}
+              {/* =================================================
+                  ACTIONS
+              ================================================= */}
 
               <div className="book-details-actions">
                 {isAvailable ? (
@@ -459,7 +608,7 @@ function BookDetails() {
                     type="button"
                     className="book-borrow-btn"
                     onClick={handleBorrow}
-                    disabled={actionLoading}
+                    disabled={actionLoading || authLoading}
                   >
                     {actionLoading ? (
                       <LoaderCircle size={18} className="book-action-spinner" />
@@ -467,46 +616,55 @@ function BookDetails() {
                       <BookOpen size={18} />
                     )}
 
-                    {actionLoading ? "Borrowing..." : "Borrow Book"}
+                    {actionLoading ? "Sending Request..." : "Request to Borrow"}
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    className="book-notify-btn"
-                    onClick={() => setActionMessage("Add to wishlist.")}
-                  >
+                  <button type="button" className="book-notify-btn" disabled>
                     <Clock3 size={18} />
                     Currently Unavailable
                   </button>
                 )}
 
-                {/* WISHLIST */}
+                {/* =================================================
+                    WISHLIST
+                ================================================= */}
 
                 <button
                   type="button"
                   className={`book-wishlist-btn ${wishlist ? "active" : ""}`}
                   onClick={toggleWishlist}
+                  disabled={wishlistLoading || authLoading}
+                  title={wishlist ? "Remove from wishlist" : "Add to wishlist"}
+                  aria-label={
+                    wishlist ? "Remove from wishlist" : "Add to wishlist"
+                  }
                 >
-                  <Heart size={22} fill={wishlist ? "currentColor" : "none"} />
+                  {wishlistLoading ? (
+                    <LoaderCircle size={22} className="book-action-spinner" />
+                  ) : (
+                    <Heart
+                      size={22}
+                      fill={wishlist ? "currentColor" : "none"}
+                    />
+                  )}
                 </button>
               </div>
 
-              {/* ACTION MESSAGE */}
+              {/* =================================================
+                  SUCCESS MESSAGE
+              ================================================= */}
 
               {actionMessage && (
-                <div
-                  className={`book-action-message ${
-                    actionMessage === "Add to wishlist."
-                      ? "wishlist-message"
-                      : "borrow-success"
-                  }`}
-                >
+                <div className="book-action-message borrow-success">
                   <CheckCircle2 size={16} />
+
                   <span>{actionMessage}</span>
                 </div>
               )}
 
-              {/* ERROR */}
+              {/* =================================================
+                  ERROR
+              ================================================= */}
 
               {actionError && (
                 <div className="book-action-message error">
@@ -516,7 +674,9 @@ function BookDetails() {
                 </div>
               )}
 
-              {/* COPY STATUS */}
+              {/* =================================================
+                  COPY STATUS
+              ================================================= */}
 
               <div className="book-copy-status">
                 <div className="copy-status-icon">
@@ -530,7 +690,7 @@ function BookDetails() {
 
                   <span>
                     {isAvailable
-                      ? "You can borrow this book now."
+                      ? "You can request this book now."
                       : "All copies are currently issued."}
                   </span>
                 </div>
@@ -544,7 +704,9 @@ function BookDetails() {
                 </div>
               </div>
 
-              {/* BOOK INFORMATION */}
+              {/* =================================================
+                  BOOK INFORMATION
+              ================================================= */}
 
               <div className="book-information">
                 <h2>Book Information</h2>
@@ -602,7 +764,9 @@ function BookDetails() {
             </div>
           </div>
 
-          {/* LIBRARY NOTE */}
+          {/* =================================================
+              LIBRARY NOTE
+          ================================================= */}
 
           <section className="book-library-note">
             <div className="book-library-note-icon">
@@ -621,7 +785,9 @@ function BookDetails() {
         </div>
       </main>
 
-      {/* LOGIN MODAL */}
+      {/* =================================================
+          LOGIN MODAL
+      ================================================= */}
 
       {showLoginModal && (
         <div
@@ -646,7 +812,10 @@ function BookDetails() {
 
             <h2>Login Required</h2>
 
-            <p>Please log in to your Pustakalaya account to borrow books.</p>
+            <p>
+              Please log in to your Pustakalaya account before requesting a
+              book.
+            </p>
 
             <div className="book-modal-actions">
               <button
