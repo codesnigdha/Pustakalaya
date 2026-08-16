@@ -64,12 +64,10 @@ public class BorrowRequestController {
             );
         }
 
-        /*
-         * -------------------------------------------------
-         * CASE 1:
-         * Session already contains User entity
-         * -------------------------------------------------
-         */
+        // =================================================
+        // CASE 1:
+        // Session contains User entity
+        // =================================================
 
         if (sessionUser instanceof User) {
 
@@ -84,15 +82,10 @@ public class BorrowRequestController {
                     );
         }
 
-        /*
-         * -------------------------------------------------
-         * CASE 2:
-         * Session contains AuthController.UserResponse
-         *
-         * Get ID from the session object and then fetch
-         * the REAL User entity from the database.
-         * -------------------------------------------------
-         */
+        // =================================================
+        // CASE 2:
+        // Session contains AuthController.UserResponse
+        // =================================================
 
         try {
 
@@ -131,7 +124,8 @@ public class BorrowRequestController {
     }
 
     // =====================================================
-    // USER → CREATE REQUEST
+    // USER → CREATE BORROW REQUEST
+    // POST /api/borrow-requests
     // =====================================================
 
     @PostMapping
@@ -140,6 +134,10 @@ public class BorrowRequestController {
             HttpSession session) {
 
         try {
+
+            // -------------------------------------------------
+            // Validate book ID
+            // -------------------------------------------------
 
             if (request == null ||
                     request.getBookId() == null) {
@@ -151,15 +149,17 @@ public class BorrowRequestController {
                         );
             }
 
-            /*
-             * Get the REAL logged-in User.
-             */
+            // -------------------------------------------------
+            // Get logged-in user
+            // -------------------------------------------------
+
             User loggedInUser =
                     getLoggedInUser(session);
 
-            /*
-             * Create borrow request.
-             */
+            // -------------------------------------------------
+            // Create request
+            // -------------------------------------------------
+
             BorrowRequest saved =
                     borrowRequestService.createRequest(
                             loggedInUser.getId(),
@@ -170,14 +170,35 @@ public class BorrowRequestController {
 
         } catch (RuntimeException error) {
 
+            String message =
+                    error.getMessage();
+
+            // -------------------------------------------------
+            // User is not logged in
+            // -------------------------------------------------
+
+            if (message != null &&
+                    message.toLowerCase()
+                            .contains("login")) {
+
+                return ResponseEntity
+                        .status(HttpStatus.UNAUTHORIZED)
+                        .body(message);
+            }
+
+            // -------------------------------------------------
+            // Other request errors
+            // -------------------------------------------------
+
             return ResponseEntity
                     .badRequest()
-                    .body(error.getMessage());
+                    .body(message);
         }
     }
 
     // =====================================================
     // USER → MY REQUESTS
+    // GET /api/borrow-requests/my
     // =====================================================
 
     @GetMapping("/my")
@@ -205,7 +226,8 @@ public class BorrowRequestController {
     }
 
     // =====================================================
-    // LIBRARIAN → PENDING
+    // LIBRARIAN → PENDING REQUESTS
+    // GET /api/borrow-requests/pending
     // =====================================================
 
     @GetMapping("/pending")
@@ -219,7 +241,8 @@ public class BorrowRequestController {
     }
 
     // =====================================================
-    // LIBRARIAN → ALL
+    // LIBRARIAN → ALL REQUESTS
+    // GET /api/borrow-requests
     // =====================================================
 
     @GetMapping
@@ -233,7 +256,16 @@ public class BorrowRequestController {
     }
 
     // =====================================================
-    // LIBRARIAN → APPROVE
+    // LIBRARIAN → APPROVE REQUEST
+    //
+    // PUT
+    // /api/borrow-requests/{requestId}/approve/{librarianId}
+    //
+    // After approval:
+    // 1. Request status → APPROVED
+    // 2. Borrow record is created
+    // 3. Book appears in user's My Books
+    // 4. User receives notification
     // =====================================================
 
     @PutMapping(
@@ -244,6 +276,24 @@ public class BorrowRequestController {
             @PathVariable Long librarianId) {
 
         try {
+
+            if (requestId == null) {
+
+                return ResponseEntity
+                        .badRequest()
+                        .body(
+                                "Request ID is required."
+                        );
+            }
+
+            if (librarianId == null) {
+
+                return ResponseEntity
+                        .badRequest()
+                        .body(
+                                "Librarian ID is required."
+                        );
+            }
 
             BorrowRequest result =
                     borrowRequestService
@@ -263,7 +313,21 @@ public class BorrowRequestController {
     }
 
     // =====================================================
-    // LIBRARIAN → REJECT
+    // LIBRARIAN → REJECT REQUEST
+    //
+    // PUT
+    // /api/borrow-requests/{requestId}/reject
+    //
+    // Request body:
+    //
+    // {
+    //     "librarianId": 5,
+    //     "message": "Book is currently reserved."
+    // }
+    //
+    // After rejection:
+    // Request status → REJECTED
+    // User receives notification
     // =====================================================
 
     @PutMapping(
@@ -275,9 +339,10 @@ public class BorrowRequestController {
 
         try {
 
-            /*
-             * Validate request body.
-             */
+            // -------------------------------------------------
+            // Validate decision
+            // -------------------------------------------------
+
             if (decision == null) {
 
                 return ResponseEntity
@@ -287,9 +352,10 @@ public class BorrowRequestController {
                         );
             }
 
-            /*
-             * Librarian ID is required.
-             */
+            // -------------------------------------------------
+            // Validate librarian
+            // -------------------------------------------------
+
             if (decision.getLibrarianId() == null) {
 
                 return ResponseEntity
@@ -299,11 +365,10 @@ public class BorrowRequestController {
                         );
             }
 
-            /*
-             * Call the rejection service.
-             *
-             * The message is optional.
-             */
+            // -------------------------------------------------
+            // Reject request
+            // -------------------------------------------------
+
             BorrowRequest result =
                     borrowRequestService
                             .rejectRequest(
@@ -323,7 +388,9 @@ public class BorrowRequestController {
     }
 
     // =====================================================
-    // LIBRARIAN → NOT AVAILABLE
+    // EXISTING NOT AVAILABLE ENDPOINT
+    //
+    // KEPT SO WE DON'T BREAK YOUR EXISTING CODE.
     // =====================================================
 
     @PutMapping(

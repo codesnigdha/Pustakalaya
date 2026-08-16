@@ -31,11 +31,28 @@ public class BorrowRequestService {
 
     private final NotificationService notificationService;
 
+    /*
+     * IMPORTANT:
+     *
+     * BorrowService is used only when the librarian
+     * approves a borrow request.
+     *
+     * This creates the actual Borrow record so the
+     * approved book appears in the user's My Books
+     * section.
+     */
+    private final BorrowService borrowService;
+
+    // =====================================================
+    // CONSTRUCTOR
+    // =====================================================
+
     public BorrowRequestService(
             BorrowRequestRepository borrowRequestRepository,
             UserRepository userRepository,
             BookRepository bookRepository,
-            NotificationService notificationService) {
+            NotificationService notificationService,
+            BorrowService borrowService) {
 
         this.borrowRequestRepository =
                 borrowRequestRepository;
@@ -48,6 +65,9 @@ public class BorrowRequestService {
 
         this.notificationService =
                 notificationService;
+
+        this.borrowService =
+                borrowService;
     }
 
     // =====================================================
@@ -59,12 +79,20 @@ public class BorrowRequestService {
             Long userId,
             BorrowRequestCreate request) {
 
+        // =================================================
+        // VALIDATE USER ID
+        // =================================================
+
         if (userId == null) {
 
             throw new RuntimeException(
                     "You must be logged in to request a book."
             );
         }
+
+        // =================================================
+        // VALIDATE REQUEST
+        // =================================================
 
         if (request == null ||
                 request.getBookId() == null) {
@@ -103,7 +131,8 @@ public class BorrowRequestService {
         // CHECK AVAILABILITY
         // =================================================
 
-        if (book.getAvailableCopies() <= 0) {
+        if (book.getAvailableCopies() == null ||
+                book.getAvailableCopies() <= 0) {
 
             throw new RuntimeException(
                     "This book is currently unavailable."
@@ -124,6 +153,8 @@ public class BorrowRequestService {
                 userRequests.stream()
                         .anyMatch(
                                 existing ->
+                                        existing.getBook() != null
+                                                &&
                                         existing.getBook()
                                                 .getId()
                                                 .equals(book.getId())
@@ -155,6 +186,12 @@ public class BorrowRequestService {
                 LocalDate.now()
         );
 
+        /*
+         * User has requested the book.
+         *
+         * PENDING means:
+         * Librarian has not accepted/rejected it yet.
+         */
         borrowRequest.setStatus(
                 BorrowRequestStatus.PENDING
         );
@@ -240,6 +277,28 @@ public class BorrowRequestService {
             Long librarianId) {
 
         // =================================================
+        // VALIDATE REQUEST ID
+        // =================================================
+
+        if (requestId == null) {
+
+            throw new RuntimeException(
+                    "Request ID is required."
+            );
+        }
+
+        // =================================================
+        // VALIDATE LIBRARIAN ID
+        // =================================================
+
+        if (librarianId == null) {
+
+            throw new RuntimeException(
+                    "Librarian ID is required."
+            );
+        }
+
+        // =================================================
         // FIND REQUEST
         // =================================================
 
@@ -290,22 +349,72 @@ public class BorrowRequestService {
         }
 
         // =================================================
+        // GET USER
+        // =================================================
+
+        User user =
+                request.getUser();
+
+        if (user == null ||
+                user.getId() == null) {
+
+            throw new RuntimeException(
+                    "User information is missing from this request."
+            );
+        }
+
+        // =================================================
         // GET BOOK
         // =================================================
 
         Book book =
                 request.getBook();
 
+        if (book == null ||
+                book.getId() == null) {
+
+            throw new RuntimeException(
+                    "Book information is missing from this request."
+            );
+        }
+
         // =================================================
         // CHECK BOOK AVAILABILITY
         // =================================================
 
-        if (book.getAvailableCopies() <= 0) {
+        if (book.getAvailableCopies() == null ||
+                book.getAvailableCopies() <= 0) {
 
             throw new RuntimeException(
                     "This book is no longer available."
             );
         }
+
+        // =================================================
+        // CREATE ACTUAL BORROW RECORD
+        // =================================================
+
+        /*
+         * IMPORTANT:
+         *
+         * This calls the existing BorrowService.
+         *
+         * BorrowService:
+         *
+         * 1. Creates Borrow record
+         * 2. Sets borrow date
+         * 3. Sets due date
+         * 4. Decreases available copies
+         * 5. Updates book status
+         * 6. Saves the Borrow record
+         *
+         * Therefore, after approval the book will appear
+         * in the user's My Books section.
+         */
+        borrowService.borrowBook(
+                user.getId(),
+                book.getId()
+        );
 
         // =================================================
         // APPROVE REQUEST
@@ -321,6 +430,16 @@ public class BorrowRequestService {
 
         request.setReviewedAt(
                 LocalDateTime.now()
+        );
+
+        /*
+         * Optional:
+         *
+         * If the book is approved immediately,
+         * availableFrom is today.
+         */
+        request.setAvailableFrom(
+                LocalDate.now()
         );
 
         BorrowRequest saved =
@@ -341,6 +460,7 @@ public class BorrowRequestService {
                 "Your request for '"
                 + book.getTitle()
                 + "' has been approved. "
+                + "The book has been added to your borrowed books. "
                 + "Please collect the book from the library."
         );
 
@@ -349,9 +469,6 @@ public class BorrowRequestService {
 
     // =====================================================
     // LIBRARIAN → REJECT
-    //
-    // Uses NOT_AVAILABLE because that is the status
-    // available in BorrowRequestStatus.
     // =====================================================
 
     @Transactional
@@ -359,6 +476,28 @@ public class BorrowRequestService {
             Long requestId,
             Long librarianId,
             String message) {
+
+        // =================================================
+        // VALIDATE REQUEST ID
+        // =================================================
+
+        if (requestId == null) {
+
+            throw new RuntimeException(
+                    "Request ID is required."
+            );
+        }
+
+        // =================================================
+        // VALIDATE LIBRARIAN ID
+        // =================================================
+
+        if (librarianId == null) {
+
+            throw new RuntimeException(
+                    "Librarian ID is required."
+            );
+        }
 
         // =================================================
         // FIND REQUEST
@@ -411,11 +550,11 @@ public class BorrowRequestService {
         }
 
         // =================================================
-        // SET NOT AVAILABLE
+        // SET REJECTED
         // =================================================
 
         request.setStatus(
-                BorrowRequestStatus.NOT_AVAILABLE
+                BorrowRequestStatus.REJECTED
         );
 
         request.setReviewedBy(
@@ -438,13 +577,17 @@ public class BorrowRequestService {
             );
         }
 
+        // =================================================
+        // SAVE REQUEST
+        // =================================================
+
         BorrowRequest saved =
                 borrowRequestRepository.save(
                         request
                 );
 
         // =================================================
-        // CREATE USER MESSAGE
+        // CREATE USER NOTIFICATION MESSAGE
         // =================================================
 
         String notificationMessage =
@@ -479,12 +622,7 @@ public class BorrowRequestService {
     // =====================================================
     // LIBRARIAN → NOT AVAILABLE
     //
-    // This method is used by your existing controller:
-    //
-    // PUT
-    // /api/borrow-requests/{id}/not-available
-    //
-    // It does NOT require availableFrom.
+    // EXISTING METHOD KEPT FOR COMPATIBILITY
     // =====================================================
 
     @Transactional
@@ -562,17 +700,18 @@ public class BorrowRequestService {
 
         // =================================================
         // SET NOT AVAILABLE
+        //
+        // KEPT BECAUSE THIS IS AN EXISTING ENDPOINT.
         // =================================================
 
         request.setStatus(
                 BorrowRequestStatus.NOT_AVAILABLE
         );
 
-        /*
-         * availableFrom is optional.
-         *
-         * The librarian can simply reject the request.
-         */
+        // =================================================
+        // AVAILABLE FROM
+        // =================================================
+
         request.setAvailableFrom(
                 decision.getAvailableFrom()
         );
@@ -589,6 +728,10 @@ public class BorrowRequestService {
             );
         }
 
+        // =================================================
+        // REVIEW INFORMATION
+        // =================================================
+
         request.setReviewedBy(
                 librarian
         );
@@ -596,6 +739,10 @@ public class BorrowRequestService {
         request.setReviewedAt(
                 LocalDateTime.now()
         );
+
+        // =================================================
+        // SAVE REQUEST
+        // =================================================
 
         BorrowRequest saved =
                 borrowRequestRepository.save(
