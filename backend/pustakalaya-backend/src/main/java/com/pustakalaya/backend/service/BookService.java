@@ -9,6 +9,7 @@ import com.pustakalaya.backend.entity.Book;
 import com.pustakalaya.backend.entity.BookStatus;
 import com.pustakalaya.backend.entity.Category;
 import com.pustakalaya.backend.repository.BookRepository;
+import com.pustakalaya.backend.repository.BorrowRepository;
 import com.pustakalaya.backend.repository.CategoryRepository;
 
 @Service
@@ -16,13 +17,16 @@ public class BookService {
 
     private final BookRepository bookRepository;
     private final CategoryRepository categoryRepository;
+    private final BorrowRepository borrowRepository;
 
     public BookService(
             BookRepository bookRepository,
-            CategoryRepository categoryRepository) {
+            CategoryRepository categoryRepository,
+            BorrowRepository borrowRepository) {
 
         this.bookRepository = bookRepository;
         this.categoryRepository = categoryRepository;
+        this.borrowRepository = borrowRepository;
     }
 
     // =====================================================
@@ -360,7 +364,7 @@ public class BookService {
 
             else if (
                     updatedBook.getCategory().getName() != null
-                    &&
+                            &&
                     !updatedBook
                             .getCategory()
                             .getName()
@@ -388,7 +392,7 @@ public class BookService {
             }
 
             // -------------------------------------------------
-            // SET CATEGORY ON EXISTING BOOK
+            // SET CATEGORY
             // -------------------------------------------------
 
             if (category != null) {
@@ -474,12 +478,34 @@ public class BookService {
 
     public void deleteBook(Long id) {
 
+        // -------------------------------------------------
+        // CHECK BOOK EXISTS
+        // -------------------------------------------------
+
         if (!bookRepository.existsById(id)) {
 
             throw new RuntimeException(
                     "Book not found with id: " + id
             );
         }
+
+        // -------------------------------------------------
+        // CHECK BORROW HISTORY
+        // -------------------------------------------------
+
+        boolean hasBorrowHistory =
+                borrowRepository.existsByBookId(id);
+
+        if (hasBorrowHistory) {
+
+            throw new RuntimeException(
+                    "Unable to delete this book because it has been borrowed by someone."
+            );
+        }
+
+        // -------------------------------------------------
+        // DELETE BOOK
+        // -------------------------------------------------
 
         bookRepository.deleteById(id);
     }

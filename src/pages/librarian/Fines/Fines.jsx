@@ -57,9 +57,7 @@ function Fines() {
         <div>
           <span>FINE MANAGEMENT</span>
 
-          <h1>
-            Library <em>Fines</em>
-          </h1>
+          <h1>Library Fines</h1>
 
           <p>Track overdue charges and payment status.</p>
         </div>

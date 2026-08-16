@@ -5,20 +5,68 @@ const API_URL =
 
 const BOOKS_URL = `${API_URL}/api/books`;
 
+/* =====================================================
+   ERROR HANDLER
+===================================================== */
+
 function getApiError(error, fallbackMessage) {
   const data = error?.response?.data;
 
+  // ---------------------------------------------------
+  // Backend returns a simple string
+  // ---------------------------------------------------
+
   if (typeof data === "string" && data.trim()) {
-    return data;
+    const message = data.trim();
+
+    // -------------------------------------------------
+    // Convert old MySQL foreign-key error
+    // -------------------------------------------------
+
+    if (
+      message.includes("Cannot delete or update a parent row") ||
+      message.includes("foreign key constraint fails") ||
+      message.includes("borrows")
+    ) {
+      return "Unable to delete this book because it has been borrowed by someone.";
+    }
+
+    return message;
   }
 
+  // ---------------------------------------------------
+  // Backend returns { message: "..." }
+  // ---------------------------------------------------
+
   if (data?.message) {
+    if (
+      data.message.includes("Cannot delete or update a parent row") ||
+      data.message.includes("foreign key constraint fails")
+    ) {
+      return "Unable to delete this book because it has been borrowed by someone.";
+    }
+
     return data.message;
   }
 
+  // ---------------------------------------------------
+  // Backend returns { error: "..." }
+  // ---------------------------------------------------
+
   if (data?.error) {
+    if (
+      data.error.includes("Cannot delete or update a parent row") ||
+      data.error.includes("foreign key constraint fails")
+    ) {
+      return "Unable to delete this book because it has been borrowed by someone.";
+    }
+
     return data.error;
   }
+
+  // ---------------------------------------------------
+  // Axios error
+  // ---------------------------------------------------
 
   if (error?.message) {
     return error.message;
@@ -27,9 +75,9 @@ function getApiError(error, fallbackMessage) {
   return fallbackMessage;
 }
 
-/* =========================
+/* =====================================================
    GET ALL BOOKS
-========================= */
+===================================================== */
 
 export async function getAllBooks() {
   try {
@@ -43,9 +91,9 @@ export async function getAllBooks() {
   }
 }
 
-/* =========================
+/* =====================================================
    GET BOOK BY ID
-========================= */
+===================================================== */
 
 export async function getBookById(id) {
   if (!id) {
@@ -63,9 +111,9 @@ export async function getBookById(id) {
   }
 }
 
-/* =========================
+/* =====================================================
    SEARCH BOOKS
-========================= */
+===================================================== */
 
 export async function searchBooks(keyword = "") {
   try {
@@ -83,9 +131,9 @@ export async function searchBooks(keyword = "") {
   }
 }
 
-/* =========================
+/* =====================================================
    BOOKS BY CATEGORY
-========================= */
+===================================================== */
 
 export async function getBooksByCategory(categoryId) {
   if (!categoryId) {
@@ -103,9 +151,9 @@ export async function getBooksByCategory(categoryId) {
   }
 }
 
-/* =========================
+/* =====================================================
    ADD BOOK
-========================= */
+===================================================== */
 
 export async function addBook(bookData) {
   try {
@@ -123,9 +171,9 @@ export async function addBook(bookData) {
   }
 }
 
-/* =========================
+/* =====================================================
    UPDATE BOOK
-========================= */
+===================================================== */
 
 export async function updateBook(id, bookData) {
   if (!id) {
@@ -147,9 +195,9 @@ export async function updateBook(id, bookData) {
   }
 }
 
-/* =========================
+/* =====================================================
    DELETE BOOK
-========================= */
+===================================================== */
 
 export async function deleteBook(id) {
   if (!id) {

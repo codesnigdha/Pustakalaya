@@ -18,6 +18,7 @@ import Login from "./pages/auth/Login/Login";
 import Signup from "./pages/auth/Signup/Signup";
 import SignupUser from "./pages/auth/SignupUser/SignupUser";
 import SignupLibrarian from "./pages/auth/SignupLibrarian/SignupLibrarian";
+import Unauthorized from "./pages/public/Unauthorized/Unauthorized";
 
 /* =====================================================
    USER PAGES
@@ -66,7 +67,12 @@ function App() {
           PUBLIC ROUTES
       ================================================= */}
 
+      {/* Home */}
       <Route path="/" element={<Home />} />
+
+      {/* Home alias
+          Allows /home to work as well */}
+      <Route path="/home" element={<Home />} />
 
       <Route path="/books" element={<Books />} />
 
@@ -191,6 +197,12 @@ function App() {
         {/* /librarian/settings */}
         <Route path="settings" element={<LibrarianSettings />} />
       </Route>
+
+      {/* =================================================
+          UNAUTHORIZED
+      ================================================= */}
+
+      <Route path="/unauthorized" element={<Unauthorized />} />
 
       {/* =================================================
           404

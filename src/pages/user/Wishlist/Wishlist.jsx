@@ -5,18 +5,23 @@ import {
   Filter,
   Trash2,
   Eye,
-  BookMarked,
   CheckCircle2,
   XCircle,
-  Bell,
-  BellRing,
 } from "lucide-react";
 
 import { useEffect, useMemo, useState } from "react";
+
 import { Link } from "react-router-dom";
 
 import Navbar from "../../../components/Navbar/Navbar";
 import Footer from "../../../components/Footer/Footer";
+
+import { getCurrentUser } from "../../../services/authService";
+
+import {
+  getUserWishlist,
+  removeFromWishlist,
+} from "../../../services/wishlistService";
 
 import "./Wishlist.css";
 
@@ -27,180 +32,117 @@ function Wishlist() {
 
   const [filter, setFilter] = useState("all");
 
-  const [notifiedBooks, setNotifiedBooks] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  /* =====================================================
-     LOAD WISHLIST
-  ===================================================== */
+  const [error, setError] = useState("");
+
+  const [removingId, setRemovingId] = useState(null);
+
+  // =====================================================
+  // LOAD WISHLIST
+  // =====================================================
 
   useEffect(() => {
-    try {
-      const storedWishlist =
-        JSON.parse(localStorage.getItem("pustakalaya_wishlist")) || [];
-
-      const storedNotifications =
-        JSON.parse(
-          localStorage.getItem("pustakalaya_availability_notifications"),
-        ) || [];
-
-      setWishlist(Array.isArray(storedWishlist) ? storedWishlist : []);
-
-      setNotifiedBooks(
-        Array.isArray(storedNotifications) ? storedNotifications : [],
-      );
-    } catch (error) {
-      console.error("Unable to load wishlist:", error);
-
-      setWishlist([]);
-      setNotifiedBooks([]);
-    }
+    loadWishlist();
   }, []);
 
-  /* =====================================================
-     UPDATE WISHLIST
-  ===================================================== */
+  // =====================================================
+  // LOAD FROM BACKEND
+  // =====================================================
 
-  const updateWishlist = (updatedWishlist) => {
-    setWishlist(updatedWishlist);
+  const loadWishlist = async () => {
+    try {
+      setLoading(true);
+      setError("");
 
-    localStorage.setItem(
-      "pustakalaya_wishlist",
-      JSON.stringify(updatedWishlist),
-    );
+      const user = getCurrentUser();
+
+      if (!user || !user.id) {
+        setError("Please login to view your wishlist.");
+
+        setWishlist([]);
+
+        return;
+      }
+
+      const data = await getUserWishlist(user.id);
+
+      console.log("Wishlist API response:", data);
+
+      setWishlist(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Wishlist loading error:", err);
+
+      setError(err.message || "Unable to load wishlist.");
+
+      setWishlist([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  /* =====================================================
-     GET AVAILABILITY
-  ===================================================== */
+  // =====================================================
+  // REMOVE BOOK
+  // =====================================================
 
-  const isBookAvailable = (book) => {
-    if (typeof book.available === "boolean") {
-      return book.available;
-    }
+  const handleRemove = async (wishlistItem) => {
+    const user = getCurrentUser();
 
-    if (typeof book.availableCopies !== "undefined") {
-      return Number(book.availableCopies) > 0;
-    }
+    const bookId = wishlistItem?.book?.id;
 
-    if (typeof book.quantity !== "undefined") {
-      return Number(book.quantity) > 0;
-    }
-
-    return false;
-  };
-
-  /* =====================================================
-     REMOVE FROM WISHLIST
-  ===================================================== */
-
-  const removeBook = (id) => {
-    const updatedWishlist = wishlist.filter((book) => book.id !== id);
-
-    updateWishlist(updatedWishlist);
-  };
-
-  /* =====================================================
-     BORROW BOOK
-  ===================================================== */
-
-  const borrowBook = (book) => {
-    const storedBooks =
-      JSON.parse(localStorage.getItem("pustakalaya_my_books")) || [];
-
-    const alreadyBorrowed = storedBooks.some(
-      (item) =>
-        String(item.bookId) === String(book.id) && item.status === "borrowed",
-    );
-
-    if (alreadyBorrowed) {
-      alert("This book is already in your borrowed books.");
+    if (!user?.id) {
+      alert("Please login first.");
 
       return;
     }
 
-    const today = new Date();
+    if (!bookId) {
+      alert("Book information is missing.");
 
-    const dueDate = new Date();
-
-    dueDate.setDate(dueDate.getDate() + 14);
-
-    const newBook = {
-      id: Date.now(),
-
-      bookId: book.id,
-
-      title: book.title,
-
-      author: book.author,
-
-      category: book.category,
-
-      isbn: book.isbn || "",
-
-      cover: book.cover || book.coverUrl || "",
-
-      borrowDate: today.toISOString().split("T")[0],
-
-      dueDate: dueDate.toISOString().split("T")[0],
-
-      returnDate: null,
-
-      status: "borrowed",
-    };
-
-    localStorage.setItem(
-      "pustakalaya_my_books",
-      JSON.stringify([...storedBooks, newBook]),
-    );
-
-    /* Remove after borrowing */
-
-    const updatedWishlist = wishlist.filter((item) => item.id !== book.id);
-
-    updateWishlist(updatedWishlist);
-
-    alert(`"${book.title}" has been added to My Books.`);
-  };
-
-  /* =====================================================
-     NOTIFY IF AVAILABLE
-  ===================================================== */
-
-  const notifyIfAvailable = (book) => {
-    const alreadyNotified = notifiedBooks.includes(book.id);
-
-    if (alreadyNotified) {
       return;
     }
 
-    const updatedNotifications = [...notifiedBooks, book.id];
+    try {
+      setRemovingId(wishlistItem.id);
 
-    setNotifiedBooks(updatedNotifications);
+      await removeFromWishlist(user.id, bookId);
 
-    localStorage.setItem(
-      "pustakalaya_availability_notifications",
-      JSON.stringify(updatedNotifications),
-    );
+      setWishlist((previous) =>
+        previous.filter((item) => item.id !== wishlistItem.id),
+      );
+    } catch (err) {
+      console.error("Remove wishlist error:", err);
 
-    alert(`You will be notified when "${book.title}" becomes available.`);
+      alert(err.message || "Unable to remove book.");
+    } finally {
+      setRemovingId(null);
+    }
   };
 
-  /* =====================================================
-     SEARCH + FILTER
-  ===================================================== */
+  // =====================================================
+  // FILTER
+  // =====================================================
 
   const filteredWishlist = useMemo(() => {
-    return wishlist.filter((book) => {
-      const searchText = `
-            ${book.title || ""}
-            ${book.author || ""}
-            ${book.category || ""}
-            ${book.isbn || ""}
-          `.toLowerCase();
+    return wishlist.filter((item) => {
+      const book = item.book || {};
 
-      const matchesSearch = searchText.includes(search.toLowerCase().trim());
+      const category =
+        typeof book.category === "object"
+          ? book.category?.name || ""
+          : book.category || "";
 
-      const available = isBookAvailable(book);
+      const searchText = `${book.title || ""}
+             ${book.author || ""}
+             ${category}
+             ${book.isbn || ""}`.toLowerCase();
+
+      const matchesSearch = searchText.includes(search.toLowerCase());
+
+      const available =
+        book.availableCopies != null
+          ? book.availableCopies > 0
+          : book.status === "AVAILABLE";
 
       const matchesFilter =
         filter === "all" ||
@@ -211,47 +153,73 @@ function Wishlist() {
     });
   }, [wishlist, search, filter]);
 
-  /* =====================================================
-     COUNTS
-  ===================================================== */
+  // =====================================================
+  // COUNTS
+  // =====================================================
 
-  const availableCount = wishlist.filter((book) =>
-    isBookAvailable(book),
-  ).length;
+  const availableCount = wishlist.filter((item) => {
+    const book = item.book || {};
 
-  const unavailableCount = wishlist.filter(
-    (book) => !isBookAvailable(book),
-  ).length;
+    return book.availableCopies != null
+      ? book.availableCopies > 0
+      : book.status === "AVAILABLE";
+  }).length;
 
-  /* =====================================================
-     FORMAT DATE
-  ===================================================== */
+  const unavailableCount = wishlist.length - availableCount;
+
+  // =====================================================
+  // FORMAT DATE
+  // =====================================================
 
   const formatDate = (date) => {
     if (!date) {
       return "—";
     }
 
-    const parsedDate = new Date(date);
+    const parsed = new Date(date);
 
-    if (Number.isNaN(parsedDate.getTime())) {
+    if (Number.isNaN(parsed.getTime())) {
       return "—";
     }
 
-    return parsedDate.toLocaleDateString("en-IN", {
+    return parsed.toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
       year: "numeric",
     });
   };
 
-  /* =====================================================
-     COVER
-  ===================================================== */
+  // =====================================================
+  // GET CATEGORY
+  // =====================================================
 
-  const getCover = (book) => {
-    return book.cover || book.coverUrl || book.image || "";
+  const getCategory = (book) => {
+    if (!book) {
+      return "OTHER";
+    }
+
+    if (typeof book.category === "object") {
+      return book.category?.name || "OTHER";
+    }
+
+    return book.category || "OTHER";
   };
+
+  // =====================================================
+  // GET COVER
+  // =====================================================
+
+  const getCoverImage = (book) => {
+    if (!book?.coverImage) {
+      return null;
+    }
+
+    return book.coverImage;
+  };
+
+  // =====================================================
+  // RENDER
+  // =====================================================
 
   return (
     <div className="wishlist-page">
@@ -269,7 +237,7 @@ function Wishlist() {
 
               <h1>
                 My
-                <em> Wishlist.</em>
+                <em> Wishlist</em>
               </h1>
 
               <p>Keep track of books you want to read or borrow later.</p>
@@ -367,69 +335,86 @@ function Wishlist() {
               </div>
 
               <span className="wishlist-count">
-                {filteredWishlist.length}{" "}
-                {filteredWishlist.length === 1 ? "book" : "books"}
+                {filteredWishlist.length} books
               </span>
             </div>
 
             {/* =================================================
-                EMPTY
+                LOADING
             ================================================= */}
 
-            {filteredWishlist.length === 0 ? (
+            {loading ? (
               <div className="wishlist-empty">
                 <Heart size={32} />
 
-                <h3>
-                  {wishlist.length === 0
-                    ? "Your wishlist is empty"
-                    : "No books found"}
-                </h3>
+                <h3>Loading wishlist...</h3>
 
-                <p>
-                  {wishlist.length === 0
-                    ? "Browse the library and save books you want to read later."
-                    : "Try changing your search or availability filter."}
-                </p>
+                <p>Fetching your saved books.</p>
+              </div>
+            ) : error ? (
+              <div className="wishlist-empty">
+                <XCircle size={32} />
 
-                {wishlist.length === 0 ? (
-                  <Link to="/books" className="wishlist-browse-btn">
-                    <BookOpen size={15} />
-                    Browse Books
-                  </Link>
-                ) : (
-                  <button
-                    type="button"
-                    className="wishlist-browse-btn"
-                    onClick={() => {
-                      setSearch("");
-                      setFilter("all");
-                    }}
-                  >
-                    Show All Books
-                  </button>
-                )}
+                <h3>Unable to load wishlist</h3>
+
+                <p>{error}</p>
+
+                <button
+                  type="button"
+                  className="wishlist-browse-btn"
+                  onClick={loadWishlist}
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : filteredWishlist.length === 0 ? (
+              <div className="wishlist-empty">
+                <Heart size={32} />
+
+                <h3>Your wishlist is empty</h3>
+
+                <p>Browse the library and save books you want to read later.</p>
+
+                <Link to="/books" className="wishlist-browse-btn">
+                  <BookOpen size={15} />
+                  Browse Books
+                </Link>
               </div>
             ) : (
-              /* =================================================
-                 GRID
-              ================================================= */
-
               <div className="wishlist-grid">
-                {filteredWishlist.map((book) => {
-                  const available = isBookAvailable(book);
+                {filteredWishlist.map((item) => {
+                  const book = item.book || {};
 
-                  const cover = getCover(book);
+                  const category = getCategory(book);
 
-                  const hasNotification = notifiedBooks.includes(book.id);
+                  const coverImage = getCoverImage(book);
+
+                  const available =
+                    book.availableCopies != null
+                      ? book.availableCopies > 0
+                      : book.status === "AVAILABLE";
 
                   return (
-                    <article className="wishlist-card" key={book.id}>
-                      {/* COVER */}
+                    <article className="wishlist-card" key={item.id}>
+                      {/* =================================================
+                            COVER
+                        ================================================= */}
 
                       <div className="wishlist-cover">
-                        {cover ? (
-                          <img src={cover} alt={book.title} />
+                        {coverImage ? (
+                          <img
+                            src={coverImage}
+                            alt={book.title || "Book cover"}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                              borderRadius: "6px",
+                            }}
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
                         ) : (
                           <>
                             <BookOpen size={28} />
@@ -438,23 +423,24 @@ function Wishlist() {
                           </>
                         )}
 
-                        {/* REMOVE */}
-
                         <button
                           type="button"
                           className="wishlist-remove"
-                          onClick={() => removeBook(book.id)}
+                          onClick={() => handleRemove(item)}
+                          disabled={removingId === item.id}
                           title="Remove from wishlist"
                         >
                           <Trash2 size={14} />
                         </button>
                       </div>
 
-                      {/* CONTENT */}
+                      {/* =================================================
+                            CONTENT
+                        ================================================= */}
 
                       <div className="wishlist-card-content">
                         <div className="wishlist-card-top">
-                          <span>{book.category || "Other"}</span>
+                          <span>{category}</span>
 
                           {available ? (
                             <span className="wishlist-available-badge">
@@ -469,7 +455,7 @@ function Wishlist() {
                           )}
                         </div>
 
-                        <h3>{book.title}</h3>
+                        <h3>{book.title || "Unknown Book"}</h3>
 
                         <p className="wishlist-author">
                           {book.author || "Unknown Author"}
@@ -479,51 +465,23 @@ function Wishlist() {
                           <div className="wishlist-isbn">ISBN: {book.isbn}</div>
                         )}
 
-                        {book.addedDate && (
-                          <div className="wishlist-added">
-                            Added on {formatDate(book.addedDate)}
-                          </div>
-                        )}
+                        <div className="wishlist-added">
+                          Added on {formatDate(item.createdAt)}
+                        </div>
 
-                        {/* ACTIONS */}
+                        {/* =================================================
+                              ACTIONS
+                          ================================================= */}
 
                         <div className="wishlist-actions">
-                          <Link
-                            to={`/books/${book.id}`}
-                            className="wishlist-view-btn"
-                          >
-                            <Eye size={14} />
-                            View
-                          </Link>
-
-                          {available ? (
-                            <button
-                              type="button"
-                              className="wishlist-borrow-btn"
-                              onClick={() => borrowBook(book)}
+                          {book.id && (
+                            <Link
+                              to={`/books/${book.id}`}
+                              className="wishlist-view-btn"
                             >
-                              <BookMarked size={14} />
-                              Borrow
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              className={`wishlist-notify-btn ${
-                                hasNotification ? "active" : ""
-                              }`}
-                              onClick={() => notifyIfAvailable(book)}
-                              disabled={hasNotification}
-                            >
-                              {hasNotification ? (
-                                <BellRing size={14} />
-                              ) : (
-                                <Bell size={14} />
-                              )}
-
-                              {hasNotification
-                                ? "Notification Set"
-                                : "Notify Me"}
-                            </button>
+                              <Eye size={14} />
+                              View
+                            </Link>
                           )}
                         </div>
                       </div>

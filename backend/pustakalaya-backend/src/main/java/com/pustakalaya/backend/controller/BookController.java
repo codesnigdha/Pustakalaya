@@ -11,13 +11,15 @@ import com.pustakalaya.backend.service.BookService;
 
 @RestController
 @RequestMapping("/api/books")
+@CrossOrigin(origins = {
+    "http://localhost:5173",
+    "http://localhost:5176"
+})
 public class BookController {
 
     private final BookService bookService;
 
-    public BookController(
-            BookService bookService) {
-
+    public BookController(BookService bookService) {
         this.bookService = bookService;
     }
 
@@ -38,46 +40,46 @@ public class BookController {
 
         } catch (Exception e) {
 
+            e.printStackTrace();
+
             return ResponseEntity
-                .status(
-                    HttpStatus.INTERNAL_SERVER_ERROR
-                )
-                .body(
-                    "Unable to load books."
-                );
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Unable to load books.");
         }
     }
 
     // =====================================================
-    // SEARCH
-    // GET /api/books/search?keyword=clean
+    // SEARCH BOOKS
+    // GET /api/books/search?keyword=java
     // =====================================================
 
     @GetMapping("/search")
     public ResponseEntity<?> searchBooks(
             @RequestParam(
-                name = "keyword",
-                required = false,
-                defaultValue = ""
+                    name = "keyword",
+                    required = false,
+                    defaultValue = ""
             )
             String keyword) {
 
         try {
 
             return ResponseEntity.ok(
-                bookService.searchBooks(keyword)
+                    bookService.searchBooks(keyword)
             );
 
         } catch (Exception e) {
 
+            e.printStackTrace();
+
             return ResponseEntity
-                .badRequest()
-                .body(e.getMessage());
+                    .badRequest()
+                    .body(e.getMessage());
         }
     }
 
     // =====================================================
-    // CATEGORY
+    // GET BOOKS BY CATEGORY
     // GET /api/books/category/{categoryId}
     // =====================================================
 
@@ -88,21 +90,19 @@ public class BookController {
         try {
 
             return ResponseEntity.ok(
-                bookService.getBooksByCategory(
-                    categoryId
-                )
+                    bookService.getBooksByCategory(categoryId)
             );
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
 
             return ResponseEntity
-                .badRequest()
-                .body(e.getMessage());
+                    .badRequest()
+                    .body(e.getMessage());
         }
     }
 
     // =====================================================
-    // GET ONE BOOK
+    // GET BOOK BY ID
     // GET /api/books/{id}
     // =====================================================
 
@@ -113,14 +113,14 @@ public class BookController {
         try {
 
             return ResponseEntity.ok(
-                bookService.getBookById(id)
+                    bookService.getBookById(id)
             );
 
         } catch (RuntimeException e) {
 
             return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(e.getMessage());
+                    .status(HttpStatus.NOT_FOUND)
+                    .body(e.getMessage());
         }
     }
 
@@ -139,14 +139,16 @@ public class BookController {
                     bookService.addBook(book);
 
             return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(savedBook);
+                    .status(HttpStatus.CREATED)
+                    .body(savedBook);
 
         } catch (RuntimeException e) {
 
+            e.printStackTrace();
+
             return ResponseEntity
-                .badRequest()
-                .body(e.getMessage());
+                    .badRequest()
+                    .body(e.getMessage());
         }
     }
 
@@ -164,19 +166,19 @@ public class BookController {
 
             Book updatedBook =
                     bookService.updateBook(
-                        id,
-                        book
+                            id,
+                            book
                     );
 
-            return ResponseEntity.ok(
-                updatedBook
-            );
+            return ResponseEntity.ok(updatedBook);
 
         } catch (RuntimeException e) {
 
+            e.printStackTrace();
+
             return ResponseEntity
-                .badRequest()
-                .body(e.getMessage());
+                    .badRequest()
+                    .body(e.getMessage());
         }
     }
 
@@ -194,71 +196,14 @@ public class BookController {
             bookService.deleteBook(id);
 
             return ResponseEntity.ok(
-                "Book deleted successfully."
+                    "Book deleted successfully."
             );
 
         } catch (RuntimeException e) {
 
             return ResponseEntity
-                .badRequest()
-                .body(e.getMessage());
+                    .status(HttpStatus.NOT_FOUND)
+                    .body(e.getMessage());
         }
-    }
-}
-
-@RestController
-@RequestMapping("/api/books")
-@CrossOrigin(origins = "http://localhost:5173")
-public class BookController {
-
-    private final BookService bookService;
-
-    public BookController(BookService bookService) {
-        this.bookService = bookService;
-    }
-
-    @GetMapping
-    public ResponseEntity<List<Book>> getAllBooks() {
-        return ResponseEntity.ok(
-            bookService.getAllBooks()
-        );
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<Book> getBookById(
-            @PathVariable Long id) {
-
-        return ResponseEntity.ok(
-            bookService.getBookById(id)
-        );
-    }
-
-    @PostMapping
-    public ResponseEntity<Book> addBook(
-            @RequestBody Book book) {
-
-        return ResponseEntity.ok(
-            bookService.addBook(book)
-        );
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<Book> updateBook(
-            @PathVariable Long id,
-            @RequestBody Book book) {
-
-        return ResponseEntity.ok(
-            bookService.updateBook(id, book)
-        );
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteBook(
-            @PathVariable Long id) {
-
-        bookService.deleteBook(id);
-
-        return ResponseEntity.noContent()
-            .build();
     }
 }

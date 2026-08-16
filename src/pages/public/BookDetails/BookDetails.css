@@ -456,11 +456,29 @@
   margin-top: 1px;
 }
 
-.book-action-message.success {
+/* =====================================================
+   ADD TO WISHLIST - RED
+===================================================== */
+
+.book-action-message.wishlist-message {
+  background: #f9e1e1;
+
+  color: #ef4444;
+}
+
+/* =====================================================
+   BORROW SUCCESS - GREEN
+===================================================== */
+
+.book-action-message.borrow-success {
   background: var(--success-bg);
 
   color: var(--success);
 }
+
+/* =====================================================
+   ERROR
+===================================================== */
 
 .book-action-message.error {
   background: var(--danger-bg);
@@ -779,6 +797,7 @@
   color: white;
 
   font-size: 10px;
+
   font-weight: 700;
 
   text-decoration: none;

@@ -19,6 +19,8 @@ import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../../../components/Navbar/Navbar";
 import Footer from "../../../components/Footer/Footer";
 
+import { getCurrentUser } from "../../../services/authService";
+
 import "./Home.css";
 
 /* =====================================================
@@ -35,7 +37,6 @@ const featuredBooks = [
       "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=500&q=80",
     available: true,
   },
-
   {
     id: 2,
     title: "Database System Concepts",
@@ -45,7 +46,6 @@ const featuredBooks = [
       "https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=500&q=80",
     available: true,
   },
-
   {
     id: 3,
     title: "Computer Networks",
@@ -55,7 +55,6 @@ const featuredBooks = [
       "https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=500&q=80",
     available: false,
   },
-
   {
     id: 4,
     title: "The Pragmatic Programmer",
@@ -77,31 +76,26 @@ const categories = [
     icon: "💻",
     count: "320+ Books",
   },
-
   {
     name: "Engineering",
     icon: "⚙️",
     count: "280+ Books",
   },
-
   {
     name: "Mathematics",
     icon: "📐",
     count: "190+ Books",
   },
-
   {
     name: "Literature",
     icon: "📖",
     count: "240+ Books",
   },
-
   {
     name: "Management",
     icon: "📊",
     count: "170+ Books",
   },
-
   {
     name: "Science",
     icon: "🔬",
@@ -116,7 +110,31 @@ const categories = [
 function Home() {
   const navigate = useNavigate();
 
+  /* ===================================================
+     CURRENT USER
+  =================================================== */
+
+  const [currentUser, setCurrentUser] = useState(getCurrentUser());
+
   const [searchQuery, setSearchQuery] = useState("");
+
+  /* ===================================================
+     CHECK LOGIN STATUS
+  =================================================== */
+
+  useEffect(() => {
+    const checkUser = () => {
+      setCurrentUser(getCurrentUser());
+    };
+
+    checkUser();
+
+    window.addEventListener("storage", checkUser);
+
+    return () => {
+      window.removeEventListener("storage", checkUser);
+    };
+  }, []);
 
   /* ===================================================
      LIBRARY STATUS
@@ -175,7 +193,9 @@ function Home() {
           <div className="home-hero-pattern"></div>
 
           <div className="home-container home-hero-container">
-            {/* ================= HERO CONTENT ================= */}
+            {/* =================================================
+                HERO CONTENT
+            ================================================= */}
 
             <div className="home-hero-content">
               <div className="home-hero-badge">
@@ -194,7 +214,9 @@ function Home() {
                 college library experience simpler with Pustakalaya.
               </p>
 
-              {/* ================= SEARCH ================= */}
+              {/* =================================================
+                  SEARCH
+              ================================================= */}
 
               <form className="home-search" onSubmit={handleSearch}>
                 <Search size={21} />
@@ -209,20 +231,43 @@ function Home() {
                 <button type="submit">Search</button>
               </form>
 
-              {/* ================= HERO BUTTONS ================= */}
+              {/* =================================================
+                  HERO BUTTONS
+              ================================================= */}
 
               <div className="home-hero-actions">
+                {/* ---------------------------------------------
+                    EXPLORE BOOKS
+                    Available to everyone
+                --------------------------------------------- */}
+
                 <Link to="/books" className="home-primary-btn">
                   Explore Books
                   <ArrowRight size={18} />
                 </Link>
 
-                <Link to="/signup" className="home-secondary-btn">
-                  Join Pustakalaya
-                </Link>
+                {/* ---------------------------------------------
+                    LOGGED IN
+                    → DASHBOARD
+
+                    NOT LOGGED IN
+                    → SIGNUP
+                --------------------------------------------- */}
+
+                {currentUser ? (
+                  <Link to="/dashboard" className="home-secondary-btn">
+                    Dashboard
+                  </Link>
+                ) : (
+                  <Link to="/signup" className="home-secondary-btn">
+                    Join Pustakalaya
+                  </Link>
+                )}
               </div>
 
-              {/* ================= TRUST ================= */}
+              {/* =================================================
+                  TRUST
+              ================================================= */}
 
               <div className="home-trust">
                 <div className="home-trust-avatars">
@@ -240,11 +285,15 @@ function Home() {
               </div>
             </div>
 
-            {/* ================= HERO VISUAL ================= */}
+            {/* =================================================
+                HERO VISUAL
+            ================================================= */}
 
             <div className="home-hero-visual">
               <div className="home-book-stack">
-                {/* ================= BOOK COUNT ================= */}
+                {/* =================================================
+                    BOOK COUNT
+                ================================================= */}
 
                 <div className="home-floating-card home-floating-top">
                   <BookMarked size={18} />
@@ -256,7 +305,9 @@ function Home() {
                   </div>
                 </div>
 
-                {/* ================= MAIN BOOK ================= */}
+                {/* =================================================
+                    MAIN BOOK
+                ================================================= */}
 
                 <div className="home-main-book">
                   <div className="home-book-glow"></div>
@@ -445,7 +496,7 @@ function Home() {
                   Get notifications about upcoming due dates and overdue books.
                 </p>
 
-                <Link to="/signup">
+                <Link to={currentUser ? "/books" : "/signup"}>
                   Get Started
                   <ArrowRight size={15} />
                 </Link>
@@ -491,7 +542,16 @@ function Home() {
                   Pustakalaya makes finding and managing books easier than ever.
                 </p>
 
-                <Link to="/signup" className="home-primary-btn">
+                {/* =================================================
+                    START EXPLORING
+                    PUBLIC → SIGNUP
+                    USER → BOOKS
+                ================================================= */}
+
+                <Link
+                  to={currentUser ? "/books" : "/signup"}
+                  className="home-primary-btn"
+                >
                   Start Exploring
                   <ArrowRight size={18} />
                 </Link>
@@ -518,7 +578,7 @@ function Home() {
                     <h3>Borrow or Reserve</h3>
 
                     <p>
-                      Borrow an available book or reserve one that is currently
+                      Borrow available books or reserve one that is currently
                       unavailable.
                     </p>
                   </div>
@@ -579,46 +639,49 @@ function Home() {
         </section>
 
         {/* =================================================
-            CTA
-        ================================================= */}
+    CTA
+    SHOW ONLY WHEN NOT LOGGED IN
+================================================= */}
 
-        <section className="home-cta-section">
-          <div className="home-container">
-            <div className="home-cta">
-              <div className="home-cta-decoration"></div>
+        {!currentUser && (
+          <section className="home-cta-section">
+            <div className="home-container">
+              <div className="home-cta">
+                <div className="home-cta-decoration"></div>
 
-              <div className="home-cta-content">
-                <BookOpen size={38} />
+                <div className="home-cta-content">
+                  <BookOpen size={38} />
 
-                <h2>
-                  Ready to Discover
-                  <span> Something New?</span>
-                </h2>
+                  <h2>
+                    Ready to Discover
+                    <span> Something New?</span>
+                  </h2>
 
-                <p>
-                  Join Pustakalaya and make your campus library experience
-                  smarter and simpler.
-                </p>
+                  <p>
+                    Join Pustakalaya and make your campus library experience
+                    smarter and simpler.
+                  </p>
 
-                <div className="home-cta-buttons">
-                  <Link to="/signup" className="home-cta-primary">
-                    Create Account
-                    <ArrowRight size={18} />
-                  </Link>
+                  <div className="home-cta-buttons">
+                    <Link to="/signup" className="home-cta-primary">
+                      Create Account
+                      <ArrowRight size={18} />
+                    </Link>
 
-                  <Link to="/books" className="home-cta-secondary">
-                    Browse Books
-                  </Link>
+                    <Link to="/books" className="home-cta-secondary">
+                      Browse Books
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
       </main>
 
       {/* =================================================
-            STATS
-        ================================================= */}
+          STATS
+      ================================================= */}
 
       <section className="home-stats-section">
         <div className="home-container">
@@ -630,6 +693,7 @@ function Home() {
 
               <div>
                 <strong>12.5K+</strong>
+
                 <span>Books</span>
               </div>
             </div>
@@ -641,6 +705,7 @@ function Home() {
 
               <div>
                 <strong>3.2K+</strong>
+
                 <span>Members</span>
               </div>
             </div>
@@ -652,6 +717,7 @@ function Home() {
 
               <div>
                 <strong>8.7K+</strong>
+
                 <span>Books Borrowed</span>
               </div>
             </div>
@@ -663,6 +729,7 @@ function Home() {
 
               <div>
                 <strong>25+</strong>
+
                 <span>Departments</span>
               </div>
             </div>

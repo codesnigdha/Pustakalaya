@@ -18,7 +18,7 @@
 ===================================================== */
 
 .books-header {
-  padding: 75px 0 10px 65px;
+  padding: 75px 0 10px 10px;
 
   background:
     radial-gradient(
@@ -702,6 +702,7 @@
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
 
   overflow: hidden;
 }

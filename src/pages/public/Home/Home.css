@@ -236,11 +236,13 @@
   border: 1px solid var(--border);
   color: var(--text-primary);
   background: var(--bg-secondary);
+  padding: 14px 40px;
 }
 
 .home-secondary-btn:hover {
   border-color: var(--primary);
   color: var(--primary);
+  transform: translateY(-2px);
 }
 
 .home-trust {

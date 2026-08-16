@@ -74,6 +74,7 @@ function Footer() {
             <div>
               <Clock size={15} />
               <span>Mon–Fri: 8 AM – 8 PM</span>
+              <span>Saturday: 9:00 AM – 2:00 PM</span>
             </div>
           </div>
         </div>

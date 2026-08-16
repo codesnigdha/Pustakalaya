@@ -9,16 +9,274 @@ import {
   RotateCcw,
   History,
   IndianRupee,
+  LoaderCircle,
 } from "lucide-react";
 
 import { useEffect, useMemo, useState } from "react";
+import axios from "axios";
 
 import Navbar from "../../../components/Navbar/Navbar";
 import Footer from "../../../components/Footer/Footer";
 
+import {
+  getUserBorrowedBooks,
+  getBorrowHistory,
+  returnBook,
+} from "../../../services/borrowService";
+
 import "./MyBooks.css";
 
+/* =====================================================
+   CONFIG
+===================================================== */
+
+const API_URL = "http://localhost:8083/api";
+
 const FINE_PER_DAY = 5;
+
+const USER_KEY = "pustakalaya_user";
+
+/* =====================================================
+   GET CURRENT USER
+===================================================== */
+
+function getCurrentUser() {
+  try {
+    const storedUser = localStorage.getItem(USER_KEY);
+
+    if (!storedUser) {
+      return null;
+    }
+
+    return JSON.parse(storedUser);
+  } catch (error) {
+    console.error("Unable to read current user:", error);
+    return null;
+  }
+}
+
+/* =====================================================
+   GET USER ID
+===================================================== */
+
+function getUserId() {
+  const user = getCurrentUser();
+
+  return user?.id ?? user?.userId ?? null;
+}
+
+/* =====================================================
+   GET ARRAY FROM API RESPONSE
+===================================================== */
+
+function extractArray(response) {
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  if (Array.isArray(response?.data)) {
+    return response.data;
+  }
+
+  if (Array.isArray(response?.content)) {
+    return response.content;
+  }
+
+  if (Array.isArray(response?.borrowedBooks)) {
+    return response.borrowedBooks;
+  }
+
+  if (Array.isArray(response?.books)) {
+    return response.books;
+  }
+
+  if (Array.isArray(response?.records)) {
+    return response.records;
+  }
+
+  return [];
+}
+
+/* =====================================================
+   GET BOOK ID
+===================================================== */
+
+function getBookId(record) {
+  if (!record) {
+    return null;
+  }
+
+  const book = record.book || record.bookDetails || {};
+
+  return (
+    book?.id ??
+    record.bookId ??
+    record.bookID ??
+    record.book?.bookId ??
+    record.bookDetails?.bookId ??
+    null
+  );
+}
+
+/* =====================================================
+   NORMALIZE BORROW RECORD
+===================================================== */
+
+function normalizeBorrowRecord(record, bookData = null) {
+  if (!record) {
+    return null;
+  }
+
+  const nestedBook = record.book || record.bookDetails || record.bookInfo || {};
+
+  const book = bookData || nestedBook || {};
+
+  const category =
+    book?.category?.name ||
+    book?.categoryName ||
+    record?.category?.name ||
+    record?.categoryName ||
+    record?.category ||
+    "General";
+
+  const bookId =
+    book?.id ?? nestedBook?.id ?? record?.bookId ?? record?.bookID ?? null;
+
+  return {
+    id:
+      record.id ??
+      record.borrowId ??
+      record.borrowRecordId ??
+      record.borrowingId,
+
+    bookId,
+
+    title:
+      book?.title ||
+      nestedBook?.title ||
+      record?.bookTitle ||
+      record?.title ||
+      "Unknown Book",
+
+    author:
+      book?.author ||
+      book?.authors ||
+      nestedBook?.author ||
+      record?.bookAuthor ||
+      record?.author ||
+      "Unknown Author",
+
+    category,
+
+    coverImage:
+      book?.coverImage ||
+      book?.cover_image ||
+      nestedBook?.coverImage ||
+      record?.coverImage ||
+      "",
+
+    isbn: book?.isbn || nestedBook?.isbn || record?.isbn || "",
+
+    publisher:
+      book?.publisher || nestedBook?.publisher || record?.publisher || "",
+
+    publicationYear:
+      book?.publicationYear ||
+      nestedBook?.publicationYear ||
+      record?.publicationYear ||
+      null,
+
+    borrowDate:
+      record?.borrowDate ||
+      record?.issueDate ||
+      record?.issuedDate ||
+      record?.borrowedDate ||
+      record?.createdAt ||
+      null,
+
+    dueDate:
+      record?.dueDate ||
+      record?.returnDueDate ||
+      record?.expectedReturnDate ||
+      null,
+
+    returnDate: record?.returnDate || record?.returnedDate || null,
+
+    status: String(
+      record?.status ||
+        record?.borrowStatus ||
+        record?.borrowingStatus ||
+        "BORROWED",
+    ).toLowerCase(),
+  };
+}
+
+/* =====================================================
+   FETCH BOOK BY ID
+===================================================== */
+
+async function fetchBookById(bookId) {
+  if (!bookId) {
+    return null;
+  }
+
+  try {
+    const response = await axios.get(`${API_URL}/books/${bookId}`);
+
+    return response.data;
+  } catch (error) {
+    console.error(`Unable to fetch book ${bookId}:`, error);
+
+    return null;
+  }
+}
+
+/* =====================================================
+   ENRICH BORROW RECORDS WITH REAL BOOK DATA
+===================================================== */
+
+async function enrichBorrowRecords(records) {
+  if (!records.length) {
+    return [];
+  }
+
+  const enrichedRecords = await Promise.all(
+    records.map(async (record) => {
+      const existingBook =
+        record?.book || record?.bookDetails || record?.bookInfo;
+
+      /*
+       * If the backend already returned complete
+       * book information, use it directly.
+       */
+
+      if (existingBook?.title && existingBook?.author) {
+        return normalizeBorrowRecord(record, existingBook);
+      }
+
+      /*
+       * Otherwise get the book ID and request
+       * the actual book from /api/books/{id}.
+       */
+
+      const bookId = getBookId(record);
+
+      if (!bookId) {
+        return normalizeBorrowRecord(record);
+      }
+
+      const book = await fetchBookById(bookId);
+
+      return normalizeBorrowRecord(record, book || existingBook || {});
+    }),
+  );
+
+  return enrichedRecords;
+}
+
+/* =====================================================
+   COMPONENT
+===================================================== */
 
 function MyBooks() {
   const [books, setBooks] = useState([]);
@@ -29,101 +287,102 @@ function MyBooks() {
 
   const [activeTab, setActiveTab] = useState("borrowed");
 
+  const [loading, setLoading] = useState(true);
+
+  const [returningId, setReturningId] = useState(null);
+
+  const [error, setError] = useState("");
+
   /* =====================================================
      LOAD BOOKS
   ===================================================== */
 
-  useEffect(() => {
-    const storedBooks = JSON.parse(
-      localStorage.getItem("pustakalaya_my_books"),
-    );
+  const loadBooks = async () => {
+    const userId = getUserId();
 
-    if (storedBooks) {
-      setBooks(storedBooks);
+    if (!userId) {
+      setBooks([]);
+
+      setError("Please log in to view your borrowed books.");
+
+      setLoading(false);
+
       return;
     }
 
-    /*
-     * Demo data for frontend development.
-     */
+    try {
+      setLoading(true);
 
-    const demoBooks = [
-      {
-        id: 1,
+      setError("");
 
-        title: "Java Programming",
+      /* =================================================
+         ACTIVE BORROWED BOOKS
+      ================================================= */
 
-        author: "Herbert Schildt",
+      const activeResponse = await getUserBorrowedBooks(userId);
 
-        category: "Programming",
+      /* =================================================
+         BORROW HISTORY
+      ================================================= */
 
-        borrowDate: "2026-08-01",
+      const historyResponse = await getBorrowHistory(userId);
 
-        dueDate: "2026-08-10",
+      const activeRecords = extractArray(activeResponse);
 
-        returnDate: null,
+      const historyRecords = extractArray(historyResponse);
 
-        status: "borrowed",
-      },
+      /* =================================================
+         COMBINE RECORDS
+      ================================================= */
 
-      {
-        id: 2,
+      const combinedRecords = [...activeRecords, ...historyRecords];
 
-        title: "Database Management Systems",
+      /* =================================================
+         ENRICH WITH ACTUAL BOOK DATA
+      ================================================= */
 
-        author: "Raghu Ramakrishnan",
+      const enrichedRecords = await enrichBorrowRecords(combinedRecords);
 
-        category: "Database",
+      /* =================================================
+         REMOVE DUPLICATES
+      ================================================= */
 
-        borrowDate: "2026-08-05",
+      const uniqueMap = new Map();
 
-        dueDate: "2026-08-20",
+      enrichedRecords.forEach((record) => {
+        if (!record) {
+          return;
+        }
 
-        returnDate: null,
+        /*
+         * Prefer borrow record ID.
+         */
 
-        status: "borrowed",
-      },
+        const recordId = record.id ?? `${record.bookId}-${record.borrowDate}`;
 
-      {
-        id: 3,
+        if (!uniqueMap.has(String(recordId))) {
+          uniqueMap.set(String(recordId), record);
+        }
+      });
 
-        title: "Computer Networks",
+      setBooks(Array.from(uniqueMap.values()));
+    } catch (err) {
+      console.error("Unable to load My Books:", err);
 
-        author: "Andrew S. Tanenbaum",
+      setBooks([]);
 
-        category: "Networking",
+      setError(err?.message || "Unable to load your borrowed books.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        borrowDate: "2026-07-10",
+  /* =====================================================
+     INITIAL LOAD
+  ===================================================== */
 
-        dueDate: "2026-07-20",
-
-        returnDate: "2026-07-25",
-
-        status: "returned",
-      },
-
-      {
-        id: 4,
-
-        title: "Operating System Concepts",
-
-        author: "Abraham Silberschatz",
-
-        category: "Operating Systems",
-
-        borrowDate: "2026-06-15",
-
-        dueDate: "2026-06-25",
-
-        returnDate: "2026-06-24",
-
-        status: "returned",
-      },
-    ];
-
-    localStorage.setItem("pustakalaya_my_books", JSON.stringify(demoBooks));
-
-    setBooks(demoBooks);
+  useEffect(() => {
+    loadBooks();
   }, []);
 
   /* =====================================================
@@ -131,13 +390,21 @@ function MyBooks() {
   ===================================================== */
 
   const getOverdueDays = (book) => {
-    if (book.status !== "borrowed") {
+    if (book.status === "returned" || book.status === "return") {
+      return 0;
+    }
+
+    if (!book.dueDate) {
       return 0;
     }
 
     const today = new Date();
 
     const dueDate = new Date(book.dueDate);
+
+    if (Number.isNaN(dueDate.getTime())) {
+      return 0;
+    }
 
     today.setHours(0, 0, 0, 0);
 
@@ -152,16 +419,32 @@ function MyBooks() {
     return Math.ceil(difference / (1000 * 60 * 60 * 24));
   };
 
+  /* =====================================================
+     FINE
+  ===================================================== */
+
   const getFine = (book) => {
     const overdueDays = getOverdueDays(book);
 
     return overdueDays * FINE_PER_DAY;
   };
 
-  const formatDate = (date) => {
-    if (!date) return "—";
+  /* =====================================================
+     FORMAT DATE
+  ===================================================== */
 
-    return new Date(date).toLocaleDateString("en-IN", {
+  const formatDate = (date) => {
+    if (!date) {
+      return "—";
+    }
+
+    const parsedDate = new Date(date);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      return "—";
+    }
+
+    return parsedDate.toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
       year: "numeric",
@@ -169,76 +452,84 @@ function MyBooks() {
   };
 
   /* =====================================================
-     UPDATE BOOKS
+     STATUS
   ===================================================== */
 
-  const updateBooks = (updatedBooks) => {
-    setBooks(updatedBooks);
+  const isReturned = (book) => {
+    return book.status === "returned" || book.status === "return";
+  };
 
-    localStorage.setItem("pustakalaya_my_books", JSON.stringify(updatedBooks));
+  const isBorrowed = (book) => {
+    return !isReturned(book);
   };
 
   /* =====================================================
      RETURN BOOK
   ===================================================== */
 
-  const handleReturnBook = (id) => {
+  const handleReturnBook = async (borrowId) => {
+    if (!borrowId) {
+      setError("Borrow record ID is missing.");
+
+      return;
+    }
+
     const confirmReturn = window.confirm(
-      "Are you sure you want to mark this book as returned?",
+      "Are you sure you want to return this book?",
     );
 
     if (!confirmReturn) {
       return;
     }
 
-    const updatedBooks = books.map((book) => {
-      if (book.id !== id) {
-        return book;
-      }
+    try {
+      setReturningId(borrowId);
 
-      return {
-        ...book,
+      setError("");
 
-        status: "returned",
+      await returnBook(borrowId);
 
-        returnDate: new Date().toISOString().split("T")[0],
-      };
-    });
+      await loadBooks();
+    } catch (err) {
+      console.error("Return book error:", err);
 
-    updateBooks(updatedBooks);
+      setError(err?.message || "Unable to return the book.");
+    } finally {
+      setReturningId(null);
+    }
   };
 
   /* =====================================================
-     FILTER BOOKS
+     FILTER
   ===================================================== */
 
   const filteredBooks = useMemo(() => {
+    const searchValue = search.trim().toLowerCase();
+
     return books.filter((book) => {
       const overdueDays = getOverdueDays(book);
 
       const matchesTab =
-        activeTab === "borrowed"
-          ? book.status === "borrowed"
-          : book.status === "returned";
+        activeTab === "borrowed" ? isBorrowed(book) : isReturned(book);
 
       let matchesFilter = true;
 
       if (filter === "overdue") {
-        matchesFilter = book.status === "borrowed" && overdueDays > 0;
+        matchesFilter = isBorrowed(book) && overdueDays > 0;
       }
 
       if (filter === "due-soon") {
-        matchesFilter = book.status === "borrowed" && overdueDays === 0;
+        matchesFilter = isBorrowed(book) && overdueDays === 0;
       }
 
       if (filter === "returned") {
-        matchesFilter = book.status === "returned";
+        matchesFilter = isReturned(book);
       }
 
       const searchText =
-        `${book.title} ${book.author} ${book.category}`.toLowerCase();
+        `${book.title} ${book.author} ${book.category} ${book.isbn}`.toLowerCase();
 
-      const matchesSearch = searchText.includes(search.toLowerCase());
+      const matchesSearch = searchText.includes(searchValue);
 
       return matchesTab && matchesFilter && matchesSearch;
     });
@@ -248,9 +539,9 @@ function MyBooks() {
      SUMMARY
   ===================================================== */
 
-  const borrowedBooks = books.filter((book) => book.status === "borrowed");
+  const borrowedBooks = books.filter((book) => isBorrowed(book));
 
-  const returnedBooks = books.filter((book) => book.status === "returned");
+  const returnedBooks = books.filter((book) => isReturned(book));
 
   const overdueBooks = borrowedBooks.filter((book) => getOverdueDays(book) > 0);
 
@@ -258,6 +549,32 @@ function MyBooks() {
     (total, book) => total + getFine(book),
     0,
   );
+
+  /* =====================================================
+     LOADING
+  ===================================================== */
+
+  if (loading) {
+    return (
+      <div className="my-books-page">
+        <Navbar />
+
+        <main className="my-books-main">
+          <div className="my-books-container">
+            <div className="my-books-empty">
+              <LoaderCircle size={30} className="my-books-loading-spinner" />
+
+              <h3>Loading Your Books</h3>
+
+              <p>Getting your latest library records...</p>
+            </div>
+          </div>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
 
   /* =====================================================
      RENDER
@@ -294,12 +611,22 @@ function MyBooks() {
           </section>
 
           {/* =================================================
+              ERROR
+          ================================================= */}
+
+          {error && (
+            <div className="my-books-error">
+              <AlertCircle size={16} />
+
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* =================================================
               SUMMARY
           ================================================= */}
 
           <section className="my-books-summary">
-            {/* Borrowed */}
-
             <div className="my-books-summary-card">
               <div className="my-books-summary-icon">
                 <BookOpen size={18} />
@@ -311,8 +638,6 @@ function MyBooks() {
                 <strong>{borrowedBooks.length}</strong>
               </div>
             </div>
-
-            {/* Overdue */}
 
             <div className="my-books-summary-card my-books-danger">
               <div className="my-books-summary-icon">
@@ -326,8 +651,6 @@ function MyBooks() {
               </div>
             </div>
 
-            {/* Fine */}
-
             <div className="my-books-summary-card my-books-warning">
               <div className="my-books-summary-icon">
                 <IndianRupee size={18} />
@@ -339,8 +662,6 @@ function MyBooks() {
                 <strong>₹{totalFine}</strong>
               </div>
             </div>
-
-            {/* Returned */}
 
             <div className="my-books-summary-card my-books-success">
               <div className="my-books-summary-icon">
@@ -368,6 +689,7 @@ function MyBooks() {
               }
               onClick={() => {
                 setActiveTab("borrowed");
+
                 setFilter("all");
               }}
             >
@@ -384,6 +706,7 @@ function MyBooks() {
               }
               onClick={() => {
                 setActiveTab("returned");
+
                 setFilter("returned");
               }}
             >
@@ -450,7 +773,8 @@ function MyBooks() {
               </div>
 
               <span className="my-books-count">
-                {filteredBooks.length} books
+                {filteredBooks.length}{" "}
+                {filteredBooks.length === 1 ? "book" : "books"}
               </span>
             </div>
 
@@ -461,7 +785,9 @@ function MyBooks() {
                 <h3>No books found</h3>
 
                 <p>
-                  There are no books matching your current search or filter.
+                  {activeTab === "borrowed"
+                    ? "You don't currently have any borrowed books."
+                    : "You don't have any returned books in your borrowing history."}
                 </p>
               </div>
             ) : (
@@ -471,17 +797,38 @@ function MyBooks() {
 
                   const fine = getFine(book);
 
+                  const returned = isReturned(book);
+
                   return (
-                    <article className="my-book-card" key={book.id}>
-                      {/* Book Cover */}
+                    <article
+                      className="my-book-card"
+                      key={book.id ?? `${book.bookId}-${book.borrowDate}`}
+                    >
+                      {/* =================================================
+                            BOOK COVER
+                        ================================================= */}
 
                       <div className="my-book-cover">
-                        <BookOpen size={28} />
+                        {book.coverImage ? (
+                          <img
+                            src={book.coverImage}
+                            alt={book.title}
+                            onError={(event) => {
+                              event.currentTarget.style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <>
+                            <BookOpen size={28} />
 
-                        <span>PUSTAKALAYA</span>
+                            <span>PUSTAKALAYA</span>
+                          </>
+                        )}
                       </div>
 
-                      {/* Book Content */}
+                      {/* =================================================
+                            BOOK CONTENT
+                        ================================================= */}
 
                       <div className="my-book-content">
                         <div className="my-book-top">
@@ -489,7 +836,7 @@ function MyBooks() {
                             {book.category}
                           </span>
 
-                          {book.status === "returned" ? (
+                          {returned ? (
                             <span className="my-book-status returned">
                               <CheckCircle2 size={12} />
                               Returned
@@ -507,11 +854,17 @@ function MyBooks() {
                           )}
                         </div>
 
+                        {/* BOOK TITLE */}
+
                         <h3>{book.title}</h3>
+
+                        {/* AUTHOR */}
 
                         <p className="my-book-author">{book.author}</p>
 
-                        {/* Dates */}
+                        {/* =================================================
+                              BOOK DETAILS
+                          ================================================= */}
 
                         <div className="my-book-details">
                           <div>
@@ -525,25 +878,37 @@ function MyBooks() {
                           <div>
                             <CalendarDays size={14} />
 
-                            <span>
-                              {book.status === "returned"
-                                ? "Returned"
-                                : "Due Date"}
-                            </span>
+                            <span>{returned ? "Returned" : "Due Date"}</span>
 
                             <strong>
                               {formatDate(
-                                book.status === "returned"
-                                  ? book.returnDate
-                                  : book.dueDate,
+                                returned ? book.returnDate : book.dueDate,
                               )}
                             </strong>
                           </div>
                         </div>
 
-                        {/* Overdue/Fine */}
+                        {/* =================================================
+                              ISBN
+                          ================================================= */}
 
-                        {book.status === "borrowed" && overdueDays > 0 && (
+                        {book.isbn && (
+                          <div
+                            style={{
+                              marginTop: "8px",
+                              color: "var(--text-muted)",
+                              fontSize: "7px",
+                            }}
+                          >
+                            ISBN: {book.isbn}
+                          </div>
+                        )}
+
+                        {/* =================================================
+                              FINE
+                          ================================================= */}
+
+                        {!returned && overdueDays > 0 && (
                           <div className="my-book-fine">
                             <div>
                               <AlertCircle size={14} />
@@ -555,15 +920,28 @@ function MyBooks() {
                           </div>
                         )}
 
-                        {/* Return Button */}
+                        {/* =================================================
+                              RETURN BUTTON
+                          ================================================= */}
 
-                        {book.status === "borrowed" && (
+                        {!returned && (
                           <button
                             className="my-book-return-btn"
+                            disabled={returningId === book.id}
                             onClick={() => handleReturnBook(book.id)}
                           >
-                            <RotateCcw size={15} />
-                            Mark as Returned
+                            {returningId === book.id ? (
+                              <LoaderCircle
+                                size={15}
+                                className="my-books-loading-spinner"
+                              />
+                            ) : (
+                              <RotateCcw size={15} />
+                            )}
+
+                            {returningId === book.id
+                              ? "Returning..."
+                              : "Return Book"}
                           </button>
                         )}
                       </div>

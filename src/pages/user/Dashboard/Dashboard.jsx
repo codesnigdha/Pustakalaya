@@ -8,15 +8,18 @@ import {
   UserRound,
   Bookmark,
   CheckCircle2,
-  AlertCircle,
 } from "lucide-react";
 
 import { Link } from "react-router-dom";
+
+import { useEffect, useState } from "react";
 
 import { useAuth } from "../../../context/AuthContext";
 
 import Navbar from "../../../components/Navbar/Navbar";
 import Footer from "../../../components/Footer/Footer";
+
+import { getUserBorrowedBooks } from "../../../services/borrowService";
 
 import "./Dashboard.css";
 
@@ -24,17 +27,142 @@ function Dashboard() {
   const { user, isStudent, isTeacher } = useAuth();
 
   /* =====================================================
-     DEMO LOCAL STORAGE DATA
+     BORROWED BOOKS FROM BACKEND
   ===================================================== */
 
-  const borrowedBooks =
-    JSON.parse(localStorage.getItem("pustakalaya_borrowed_books")) || [];
+  const [borrowedBooks, setBorrowedBooks] = useState([]);
+  const [borrowLoading, setBorrowLoading] = useState(true);
+
+  /* =====================================================
+     DEMO LOCAL STORAGE DATA
+     Wishlist and reservations are kept as they were.
+  ===================================================== */
 
   const wishlist =
     JSON.parse(localStorage.getItem("pustakalaya_wishlist")) || [];
 
   const reservations =
     JSON.parse(localStorage.getItem("pustakalaya_reservations")) || [];
+
+  /* =====================================================
+     LOAD USER BORROWED BOOKS
+  ===================================================== */
+
+  useEffect(() => {
+    const loadBorrowedBooks = async () => {
+      const userId = user?.id || user?.userId;
+
+      if (!userId) {
+        setBorrowedBooks([]);
+        setBorrowLoading(false);
+        return;
+      }
+
+      try {
+        setBorrowLoading(true);
+
+        const data = await getUserBorrowedBooks(userId);
+
+        console.log("BORROWED BOOKS FROM BACKEND:", data);
+
+        /*
+         * Backend should return an array.
+         * We keep only actual borrowed/active records.
+         */
+        const records = Array.isArray(data) ? data : [];
+
+        const formattedBooks = records
+          .filter((record) => {
+            const status = String(record?.status || "").toUpperCase();
+
+            /*
+             * If backend has a status, don't show returned records.
+             * BORROWED and OVERDUE are considered active.
+             *
+             * If no status is present, keep the record because
+             * the backend may return a simple borrow object.
+             */
+            if (!status) {
+              return true;
+            }
+
+            return status === "BORROWED" || status === "OVERDUE";
+          })
+          .map((record) => {
+            /*
+             * Depending on the Borrow entity, the book may be returned
+             * as:
+             *
+             * record.book
+             *
+             * or the API may return book fields directly.
+             */
+            const book = record?.book || record;
+
+            return {
+              id: book?.id || record?.bookId || record?.id,
+
+              title: book?.title || record?.title || "Unknown Book",
+
+              author: book?.author || record?.author || "Unknown Author",
+
+              cover:
+                book?.coverImage ||
+                book?.cover ||
+                record?.coverImage ||
+                record?.cover ||
+                "",
+
+              issueDate:
+                record?.borrowDate ||
+                record?.issueDate ||
+                record?.borrow_date ||
+                "N/A",
+
+              dueDate: record?.dueDate || record?.due_date || "N/A",
+
+              status: record?.status || "BORROWED",
+            };
+          });
+
+        setBorrowedBooks(formattedBooks);
+      } catch (error) {
+        console.error("Failed to load borrowed books:", error);
+
+        setBorrowedBooks([]);
+      } finally {
+        setBorrowLoading(false);
+      }
+    };
+
+    loadBorrowedBooks();
+  }, [user?.id, user?.userId]);
+
+  /* =====================================================
+     DATE FORMATTER
+  ===================================================== */
+
+  const formatDate = (date) => {
+    if (!date || date === "N/A") {
+      return "N/A";
+    }
+
+    try {
+      const parsedDate = new Date(date);
+
+      if (Number.isNaN(parsedDate.getTime())) {
+        return date;
+      }
+
+      return parsedDate.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+    } catch {
+      return date;
+    }
+  };
 
   /* =====================================================
      USER INITIAL
@@ -59,7 +187,7 @@ function Dashboard() {
               </span>
 
               <h1>
-                Welcome back, <em>{user?.name?.split(" ")[0] || "Reader"}</em>
+                Hello, <em>{user?.name?.split(" ")[0] || "Reader"}</em>
               </h1>
 
               <p>
@@ -84,7 +212,7 @@ function Dashboard() {
               <div>
                 <span>Borrowed Books</span>
 
-                <strong>{borrowedBooks.length}</strong>
+                <strong>{borrowLoading ? "..." : borrowedBooks.length}</strong>
               </div>
 
               <Link to="/my-books">
@@ -170,7 +298,17 @@ function Dashboard() {
                 </Link>
               </div>
 
-              {borrowedBooks.length === 0 ? (
+              {borrowLoading ? (
+                <div className="dashboard-empty">
+                  <div className="dashboard-empty-icon">
+                    <Library size={24} />
+                  </div>
+
+                  <h3>Loading borrowed books...</h3>
+
+                  <p>Checking your library activity.</p>
+                </div>
+              ) : borrowedBooks.length === 0 ? (
                 <div className="dashboard-empty">
                   <div className="dashboard-empty-icon">
                     <Library size={24} />
@@ -211,13 +349,13 @@ function Dashboard() {
                           <div>
                             <CalendarDays size={13} />
 
-                            <span>Issued: {book.issueDate || "N/A"}</span>
+                            <span>Issued: {formatDate(book.issueDate)}</span>
                           </div>
 
                           <div>
                             <Clock3 size={13} />
 
-                            <span>Due: {book.dueDate || "N/A"}</span>
+                            <span>Due: {formatDate(book.dueDate)}</span>
                           </div>
                         </div>
                       </div>

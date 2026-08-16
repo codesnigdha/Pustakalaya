@@ -22,13 +22,11 @@ import Navbar from "../../../components/Navbar/Navbar";
 import Footer from "../../../components/Footer/Footer";
 
 import { getBookById } from "../../../services/bookService";
-
 import { borrowBook } from "../../../services/borrowService";
 
 import "./BookDetails.css";
 
 const WISHLIST_KEY = "pustakalaya_wishlist";
-
 const USER_KEY = "pustakalaya_user";
 
 const DEFAULT_COVER =
@@ -151,6 +149,7 @@ function BookDetails() {
     async function loadBook() {
       try {
         setLoading(true);
+
         setPageError("");
         setActionMessage("");
         setActionError("");
@@ -239,11 +238,18 @@ function BookDetails() {
   const handleBorrow = async () => {
     const user = getCurrentUser();
 
+    /* -------------------------
+       LOGIN CHECK
+    ------------------------- */
+
     if (!user) {
       setShowLoginModal(true);
-
       return;
     }
+
+    /* -------------------------
+       GET USER ID
+    ------------------------- */
 
     const userId = getUserId();
 
@@ -253,16 +259,27 @@ function BookDetails() {
       return;
     }
 
+    /* -------------------------
+       BORROW BOOK
+    ------------------------- */
+
     try {
       setActionLoading(true);
 
       setActionMessage("");
-
       setActionError("");
 
-      const response = await borrowBook(Number(id), userId);
+      const response = await borrowBook(userId, Number(id));
+
+      /* -------------------------
+         SUCCESS MESSAGE
+      ------------------------- */
 
       setActionMessage(response?.message || "Book borrowed successfully.");
+
+      /* -------------------------
+         UPDATE AVAILABLE COPIES
+      ------------------------- */
 
       setBook((previous) => {
         if (!previous) {
@@ -273,14 +290,13 @@ function BookDetails() {
 
         return {
           ...previous,
-
           availableCopies: Math.max(current - 1, 0),
         };
       });
     } catch (error) {
       console.error("Borrow book error:", error);
 
-      setActionError(getApiError(error, "Unable to borrow this book."));
+      setActionError(error?.message || "Unable to borrow this book.");
     } finally {
       setActionLoading(false);
     }
@@ -457,30 +473,35 @@ function BookDetails() {
                   <button
                     type="button"
                     className="book-notify-btn"
-                    onClick={() =>
-                      setActionMessage("This book is currently unavailable.")
-                    }
+                    onClick={() => setActionMessage("Add to wishlist.")}
                   >
                     <Clock3 size={18} />
                     Currently Unavailable
                   </button>
                 )}
 
+                {/* WISHLIST */}
+
                 <button
                   type="button"
                   className={`book-wishlist-btn ${wishlist ? "active" : ""}`}
                   onClick={toggleWishlist}
                 >
-                  <Heart size={19} fill={wishlist ? "currentColor" : "none"} />
+                  <Heart size={22} fill={wishlist ? "currentColor" : "none"} />
                 </button>
               </div>
 
-              {/* SUCCESS */}
+              {/* ACTION MESSAGE */}
 
               {actionMessage && (
-                <div className="book-action-message success">
+                <div
+                  className={`book-action-message ${
+                    actionMessage === "Add to wishlist."
+                      ? "wishlist-message"
+                      : "borrow-success"
+                  }`}
+                >
                   <CheckCircle2 size={16} />
-
                   <span>{actionMessage}</span>
                 </div>
               )}

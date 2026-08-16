@@ -24,7 +24,7 @@ import "./Navbar.css";
 function Navbar() {
   const { theme, toggleTheme } = useTheme();
 
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, loading, isAuthenticated, logout } = useAuth();
 
   const navigate = useNavigate();
 
@@ -51,13 +51,26 @@ function Navbar() {
      LOGOUT
   ===================================================== */
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    try {
+      /*
+       * Wait for the logout process.
+       */
+      await logout();
+    } finally {
+      /*
+       * Close all menus.
+       */
+      setProfileOpen(false);
+      setMenuOpen(false);
 
-    setProfileOpen(false);
-    setMenuOpen(false);
-
-    navigate("/");
+      /*
+       * Go to home page.
+       */
+      navigate("/", {
+        replace: true,
+      });
+    }
   };
 
   /* =====================================================
@@ -111,7 +124,7 @@ function Navbar() {
           ================================================= */}
 
           <div className="navbar-mobile-auth">
-            {!isAuthenticated ? (
+            {!loading && !isAuthenticated ? (
               <>
                 <Link
                   to="/login"
@@ -129,7 +142,9 @@ function Navbar() {
                   Get Started
                 </Link>
               </>
-            ) : (
+            ) : null}
+
+            {!loading && isAuthenticated ? (
               <>
                 <Link
                   to="/profile"
@@ -149,7 +164,7 @@ function Navbar() {
                   Logout
                 </button>
               </>
-            )}
+            ) : null}
           </div>
         </nav>
 
@@ -162,7 +177,7 @@ function Navbar() {
               LOGGED OUT
           ================================================= */}
 
-          {!isAuthenticated && (
+          {!loading && !isAuthenticated && (
             <>
               <Link
                 to="/login"
@@ -184,7 +199,7 @@ function Navbar() {
               LOGGED IN
           ================================================= */}
 
-          {isAuthenticated && (
+          {!loading && isAuthenticated && (
             <>
               {/* ================= DASHBOARD ================= */}
 

@@ -39,6 +39,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(
                 List.of(
                         "http://localhost:5173",
+                        "http://localhost:5174",
                         "http://localhost:5176"
                 )
         );
@@ -124,7 +125,6 @@ public class SecurityConfig {
 
                 // -------------------------------------------------
                 // PUBLIC BOOK APIs
-                // Users can browse books
                 // -------------------------------------------------
 
                 .requestMatchers(
@@ -161,6 +161,45 @@ public class SecurityConfig {
                 .requestMatchers(
                         HttpMethod.DELETE,
                         "/api/books/**"
+                ).permitAll()
+
+                // -------------------------------------------------
+                // WISHLIST
+                // Temporarily public for testing
+                // -------------------------------------------------
+
+                .requestMatchers(
+                        "/api/wishlist/**"
+                ).permitAll()
+
+                // =================================================
+                // BORROW & RETURN
+                // Temporarily public for backend testing
+                // =================================================
+
+                .requestMatchers(
+                        HttpMethod.POST,
+                        "/api/borrow/borrow"
+                ).permitAll()
+
+                .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/borrow/user/**"
+                ).permitAll()
+
+                .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/borrow/history/**"
+                ).permitAll()
+
+                .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/borrow/active"
+                ).permitAll()
+
+                .requestMatchers(
+                        HttpMethod.PUT,
+                        "/api/borrow/return/**"
                 ).permitAll()
 
                 // -------------------------------------------------

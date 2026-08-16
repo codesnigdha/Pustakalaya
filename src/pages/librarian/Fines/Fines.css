@@ -1,145 +1,660 @@
+/* =========================================================
+   PUSTAKALAYA - FINES MANAGEMENT
+   Layout matched with Books Management page
+========================================================= */
+
 .lib-fines-page {
-  max-width: 1300px;
-  margin: auto;
+  min-height: 100vh;
+  padding: 32px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
-.lib-fine-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-bottom: 18px;
-}
+/* =========================================================
+   PAGE HEADER
+========================================================= */
 
-.lib-fine-stats > div {
+.lib-page-header {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 17px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg-secondary);
+  align-items: flex-start;
+  justify-content: space-between;
+
+  margin-bottom: 28px;
 }
 
-.lib-fine-stats svg {
+.lib-page-header > div {
+  min-width: 0;
+}
+
+.lib-page-header span {
+  display: block;
+
+  margin-bottom: 8px;
+
+  color: var(--primary);
+
+  font-size: 11px;
+  font-weight: 700;
+
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.lib-page-header h1 {
+  font-family: "Playfair Display", serif;
+  font-size: 34px;
+  line-height: 1.1;
+}
+
+.lib-page-header h1 span {
   color: var(--primary);
 }
 
-.lib-fine-stats span {
+.lib-page-header p {
+  margin: 9px 0 0;
+
   color: var(--text-muted);
-  font-size: 8px;
+
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* =========================================================
+   STAT CARDS
+========================================================= */
+
+.lib-fine-stats {
+  display: grid;
+
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: 14px;
+
+  margin-bottom: 24px;
+}
+
+.lib-fine-stats > div {
+  min-height: 50px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 14px;
+
+  padding: 17px 20px;
+
+  box-sizing: border-box;
+
+  border: 1px solid var(--border);
+
+  border-radius: 12px;
+
+  background: var(--bg-secondary);
+
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.lib-fine-stats > div:hover {
+  border-color: rgba(220, 168, 111, 0.35);
+
+  transform: translateY(-1px);
+}
+
+/* =========================================================
+   STAT ICON
+========================================================= */
+
+.lib-fine-stats svg {
+  width: 42px;
+  height: 42px;
+
+  flex-shrink: 0;
+
+  padding: 10px;
+
+  box-sizing: border-box;
+
+  border-radius: 10px;
+
+  background: var(--bg-tertiary);
+
+  color: var(--primary);
+}
+
+/* =========================================================
+   STAT TEXT
+========================================================= */
+
+.lib-fine-stats span {
+  display: block;
+
+  color: var(--text-muted);
+
+  font-size: 12px;
+
+  font-weight: 500;
 }
 
 .lib-fine-stats strong {
+  display: block;
+
   margin-left: auto;
-  font-family: "Playfair Display", serif;
-  font-size: 20px;
+
+  color: var(--text-primary);
+
+  font-size: 16px;
+  line-height: 1;
+
+  font-weight: 700;
+
+  white-space: nowrap;
 }
+
+/* =========================================================
+   SEARCH
+========================================================= */
 
 .lib-fine-search {
-  margin-bottom: 15px;
-}
+  width: 100%;
 
-.lib-fine-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+  height: 58px;
 
-.lib-fine-card {
   display: flex;
   align-items: center;
-  gap: 13px;
-  padding: 14px;
+
+  margin-bottom: 18px;
+
+  padding: 0 18px;
+
+  box-sizing: border-box;
+
   border: 1px solid var(--border);
-  border-radius: 10px;
+
+  border-radius: 11px;
+
   background: var(--bg-secondary);
 }
 
-.lib-fine-icon {
-  width: 38px;
-  height: 38px;
+.lib-fine-search svg {
   flex-shrink: 0;
+
+  color: var(--text-muted);
+
+  width: 19px;
+  height: 19px;
+}
+
+.lib-fine-search input {
+  width: 100%;
+  height: 100%;
+
+  margin-left: 12px;
+
+  padding: 0;
+
+  border: none;
+  outline: none;
+
+  background: transparent;
+
+  color: var(--text-primary);
+
+  font-family: inherit;
+
+  font-size: 13px;
+}
+
+.lib-fine-search input::placeholder {
+  color: var(--text-muted);
+}
+
+.lib-fine-search:focus-within {
+  border-color: rgba(220, 168, 111, 0.5);
+}
+
+/* =========================================================
+   FINE LIST
+========================================================= */
+
+.lib-fine-list {
+  width: 100%;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 10px;
+}
+
+/* =========================================================
+   FINE CARD
+   Similar to Books Management rows
+========================================================= */
+
+.lib-fine-card {
+  width: 100%;
+  min-height: 82px;
+
+  display: grid;
+
+  grid-template-columns:
+    50px
+    minmax(230px, 1fr)
+    130px
+    90px
+    90px
+    100px;
+
+  align-items: center;
+
+  column-gap: 18px;
+
+  padding: 13px 17px;
+
+  box-sizing: border-box;
+
+  border: 1px solid var(--border);
+
+  border-radius: 11px;
+
+  background: var(--bg-secondary);
+
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.lib-fine-card:hover {
+  border-color: rgba(220, 168, 111, 0.3);
+
+  background: var(--bg-secondary);
+}
+
+/* =========================================================
+   FINE ICON
+========================================================= */
+
+.lib-fine-icon {
+  width: 50px;
+  height: 50px;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 9px;
+
+  flex-shrink: 0;
+
+  border-radius: 10px;
+
   background: var(--danger-bg);
+
   color: var(--danger);
 }
 
+.lib-fine-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* =========================================================
+   USER + BOOK
+========================================================= */
+
 .lib-fine-info {
-  flex: 1;
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  justify-content: center;
 }
 
 .lib-fine-info strong {
   display: block;
-  font-size: 10px;
+
+  overflow: hidden;
+
+  color: var(--text-primary);
+
+  font-size: 14px;
+  line-height: 1.3;
+
+  font-weight: 700;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .lib-fine-info span {
   display: block;
-  margin-top: 3px;
+
+  margin-top: 4px;
+
+  overflow: hidden;
+
   color: var(--text-muted);
-  font-size: 8px;
+
+  font-size: 11px;
+  line-height: 1.3;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
+/* =========================================================
+   DATE
+========================================================= */
 
 .lib-fine-date {
   color: var(--text-muted);
-  font-size: 8px;
+
+  font-size: 11px;
+  line-height: 1.3;
+
+  white-space: nowrap;
 }
+
+/* =========================================================
+   AMOUNT
+========================================================= */
 
 .lib-fine-amount {
-  min-width: 55px;
-  text-align: right;
-  font-size: 11px;
+  color: var(--text-primary);
+
+  font-family: "Playfair Display", Georgia, serif;
+
+  font-size: 16px;
+  line-height: 1;
+
+  font-weight: 700;
+
+  white-space: nowrap;
 }
 
+/* =========================================================
+   STATUS
+========================================================= */
+
 .lib-fine-status {
-  padding: 6px 9px;
-  border-radius: 20px;
-  font-size: 8px;
+  width: fit-content;
+
+  min-width: 62px;
+  height: 29px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0 10px;
+
+  box-sizing: border-box;
+
+  border-radius: 999px;
+
+  font-size: 10px;
+  line-height: 1;
+
   font-weight: 700;
+
+  white-space: nowrap;
 }
+
+/* =========================================================
+   PENDING
+========================================================= */
 
 .lib-fine-status.pending {
   background: var(--danger-bg);
+
   color: var(--danger);
 }
 
+/* =========================================================
+   PAID
+========================================================= */
+
 .lib-fine-status.paid {
   background: var(--success-bg);
+
   color: var(--success);
 }
 
+/* =========================================================
+   MARK PAID
+========================================================= */
+
 .lib-fine-card button {
-  padding: 7px 10px;
-  border: none;
-  border-radius: 6px;
+  width: 100px;
+  height: 36px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0 10px;
+
+  border: 1px solid transparent;
+
+  border-radius: 7px;
+
   background: var(--primary);
-  color: white;
-  font-size: 8px;
+
+  color: #ffffff;
+
+  font-family: inherit;
+
+  font-size: 10px;
+  line-height: 1;
+
   font-weight: 700;
+
   cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
 }
 
-@media (max-width: 750px) {
+.lib-fine-card button:hover {
+  background: var(--primary-hover, #c9955f);
+
+  transform: translateY(-1px);
+}
+
+.lib-fine-card button:active {
+  transform: translateY(0);
+}
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+.lib-fine-empty {
+  width: 100%;
+  min-height: 250px;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 35px;
+
+  box-sizing: border-box;
+
+  border: 1px solid var(--border);
+
+  border-radius: 11px;
+
+  background: var(--bg-secondary);
+
+  text-align: center;
+}
+
+.lib-fine-empty-icon {
+  width: 54px;
+  height: 54px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin-bottom: 14px;
+
+  border-radius: 10px;
+
+  background: var(--bg-tertiary);
+
+  color: var(--primary);
+}
+
+.lib-fine-empty h3 {
+  margin: 0 0 6px;
+
+  color: var(--text-primary);
+
+  font-family: "Playfair Display", Georgia, serif;
+
+  font-size: 21px;
+}
+
+.lib-fine-empty p {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: 12px;
+}
+
+/* =========================================================
+   LARGE SCREEN
+========================================================= */
+
+@media (min-width: 1400px) {
+  .lib-fines-page {
+    max-width: 1065px;
+  }
+}
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (max-width: 1100px) {
+  .lib-fines-page {
+    max-width: none;
+
+    padding: 55px 25px 50px;
+  }
+
+  .lib-fine-card {
+    grid-template-columns:
+      50px
+      minmax(200px, 1fr)
+      110px
+      80px
+      80px
+      95px;
+
+    column-gap: 12px;
+  }
+}
+
+/* =========================================================
+   SMALL TABLET
+========================================================= */
+
+@media (max-width: 850px) {
+  .lib-fines-page {
+    padding: 40px 20px 45px;
+  }
+
+  .lib-page-header h1 {
+    font-size: 38px;
+  }
+
   .lib-fine-stats {
     grid-template-columns: 1fr;
   }
 
+  .lib-fine-list {
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
   .lib-fine-card {
-    flex-wrap: wrap;
+    min-width: 850px;
+  }
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 600px) {
+  .lib-fines-page {
+    padding: 30px 15px 40px;
   }
 
-  .lib-fine-info {
-    min-width: calc(100% - 55px);
+  .lib-page-header {
+    margin-bottom: 22px;
   }
 
-  .lib-fine-date {
-    margin-left: 51px;
+  .lib-page-header span {
+    font-size: 9px;
+    letter-spacing: 1.6px;
   }
 
-  .lib-fine-amount {
-    margin-left: auto;
+  .lib-page-header h1 {
+    font-size: 32px;
+  }
+
+  .lib-page-header p {
+    font-size: 12px;
+  }
+
+  .lib-fine-stats {
+    gap: 10px;
+  }
+
+  .lib-fine-stats > div {
+    min-height: 82px;
+
+    padding: 14px 16px;
+  }
+
+  .lib-fine-stats svg {
+    width: 40px;
+    height: 40px;
+
+    padding: 9px;
+  }
+
+  .lib-fine-stats strong {
+    font-size: 23px;
+  }
+
+  .lib-fine-search {
+    height: 52px;
+  }
+
+  .lib-fine-list {
+    overflow-x: auto;
+  }
+
+  .lib-fine-card {
+    min-width: 850px;
+  }
+}
+
+/* =========================================================
+   VERY SMALL MOBILE
+========================================================= */
+
+@media (max-width: 400px) {
+  .lib-page-header h1 {
+    font-size: 29px;
   }
 }

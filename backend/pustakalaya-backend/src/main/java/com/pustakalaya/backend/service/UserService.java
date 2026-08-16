@@ -1,5 +1,6 @@
 package com.pustakalaya.backend.service;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -102,5 +103,21 @@ public class UserService {
         }
 
         return user;
+    }
+
+    // ==========================================
+    // GET LIBRARY USERS
+    // STUDENTS + TEACHERS ONLY
+    // ==========================================
+
+    public List<User> getLibraryUsers() {
+
+        return userRepository.findAll()
+                .stream()
+                .filter(user ->
+                        user.getRole() == Role.STUDENT
+                        || user.getRole() == Role.TEACHER
+                )
+                .toList();
     }
 }
