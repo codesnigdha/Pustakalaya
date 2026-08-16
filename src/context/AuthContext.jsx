@@ -2,40 +2,33 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 import { getCurrentUser, logoutUser } from "../services/authService";
 
-/* =====================================================
-   AUTH CONTEXT
-===================================================== */
-
 const AuthContext = createContext(null);
-
-/* =====================================================
-   AUTH PROVIDER
-===================================================== */
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
 
   /*
-   * IMPORTANT:
-   *
-   * While we are checking the backend session,
-   * authentication status is not known yet.
+   * true while we are checking the Spring Boot
+   * session after page load / refresh.
    */
   const [loading, setLoading] = useState(true);
 
-  /* ===================================================
-     CHECK EXISTING SESSION
-  =================================================== */
+  /* =====================================================
+     CHECK EXISTING LOGIN SESSION
+  ===================================================== */
 
   useEffect(() => {
     let mounted = true;
 
-    async function checkAuthentication() {
+    const checkSession = async () => {
       try {
         /*
          * IMPORTANT:
          *
-         * getCurrentUser() is async.
+         * getCurrentUser() calls:
+         *
+         * GET /api/auth/me
+         *
          * We MUST await it.
          */
         const currentUser = await getCurrentUser();
@@ -45,11 +38,13 @@ export function AuthProvider({ children }) {
         }
 
         /*
-         * If backend session exists:
-         *     currentUser = actual user
+         * If Spring Boot session exists:
          *
-         * If backend session does not exist:
-         *     currentUser = null
+         * currentUser = actual logged-in user
+         *
+         * If session doesn't exist:
+         *
+         * currentUser = null
          */
         setUser(currentUser);
       } catch (error) {
@@ -59,62 +54,74 @@ export function AuthProvider({ children }) {
           setUser(null);
         }
       } finally {
+        /*
+         * Authentication check is finished.
+         */
         if (mounted) {
           setLoading(false);
         }
       }
-    }
+    };
 
-    checkAuthentication();
+    checkSession();
 
+    /*
+     * Prevent state updates if the component
+     * is unmounted while the request is running.
+     */
     return () => {
       mounted = false;
     };
   }, []);
 
-  /* ===================================================
+  /* =====================================================
      LOGIN
-  =================================================== */
+  ===================================================== */
 
   const login = (loggedInUser) => {
     /*
-     * Login response comes directly from
-     * Spring Boot.
+     * Store the user in React state.
+     *
+     * The actual session is maintained by
+     * Spring Boot through the session cookie.
      */
     setUser(loggedInUser);
   };
 
-  /* ===================================================
+  /* =====================================================
      LOGOUT
-  =================================================== */
+  ===================================================== */
 
   const logout = async () => {
     try {
       /*
-       * First tell Spring Boot to destroy
-       * the HTTP session.
+       * Tell Spring Boot to invalidate the session.
        */
       await logoutUser();
+    } catch (error) {
+      console.error("Logout failed:", error);
     } finally {
       /*
-       * Always clear frontend authentication state.
-       *
-       * This is important even if the API request
-       * fails for some reason.
+       * Always clear the frontend state,
+       * even if the backend request fails.
        */
       setUser(null);
     }
   };
 
-  /* ===================================================
+  /* =====================================================
      AUTHENTICATION STATUS
-  =================================================== */
+  ===================================================== */
 
+  /*
+   * Do NOT consider the user authenticated while
+   * the initial session check is still running.
+   */
   const isAuthenticated = !loading && Boolean(user);
 
-  /* ===================================================
+  /* =====================================================
      ROLE CHECKS
-  =================================================== */
+  ===================================================== */
 
   const isAdmin = user?.role === "ADMIN";
 
@@ -124,24 +131,29 @@ export function AuthProvider({ children }) {
 
   const isTeacher = user?.role === "TEACHER";
 
-  /* ===================================================
-     CONTEXT
-  =================================================== */
+  /* =====================================================
+     PROVIDER
+  ===================================================== */
 
   return (
     <AuthContext.Provider
       value={{
         user,
+
         loading,
 
         login,
+
         logout,
 
         isAuthenticated,
 
         isAdmin,
+
         isLibrarian,
+
         isStudent,
+
         isTeacher,
       }}
     >

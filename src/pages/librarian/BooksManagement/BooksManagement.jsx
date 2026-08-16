@@ -28,6 +28,10 @@ import {
 
 import "./BooksManagement.css";
 
+/* =====================================================
+   EMPTY BOOK
+===================================================== */
+
 const EMPTY_BOOK = {
   title: "",
   author: "",
@@ -40,6 +44,10 @@ const EMPTY_BOOK = {
   coverImage: "",
   description: "",
 };
+
+/* =====================================================
+   CATEGORIES
+===================================================== */
 
 const CATEGORIES = [
   {
@@ -68,6 +76,10 @@ const CATEGORIES = [
   },
 ];
 
+/* =====================================================
+   CATEGORY NAME
+===================================================== */
+
 function getCategoryName(book) {
   if (book?.category && typeof book.category === "object") {
     return book.category.name || "Other";
@@ -76,17 +88,33 @@ function getCategoryName(book) {
   return book?.category || "Other";
 }
 
+/* =====================================================
+   CATEGORY ID
+===================================================== */
+
 function getCategoryId(book) {
   return book?.category?.id ?? null;
 }
+
+/* =====================================================
+   AVAILABLE COPIES
+===================================================== */
 
 function getAvailableCopies(book) {
   return Number(book?.availableCopies ?? 0);
 }
 
+/* =====================================================
+   TOTAL COPIES
+===================================================== */
+
 function getTotalCopies(book) {
   return Number(book?.totalCopies ?? 0);
 }
+
+/* =====================================================
+   COMPONENT
+===================================================== */
 
 function BooksManagement() {
   const [books, setBooks] = useState([]);
@@ -119,13 +147,14 @@ function BooksManagement() {
 
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  /* =========================
+  /* =====================================================
      LOAD BOOKS
-  ========================= */
+  ===================================================== */
 
   const loadBooks = async () => {
     try {
       setLoading(true);
+
       setError("");
 
       const data = await getAllBooks();
@@ -140,22 +169,27 @@ function BooksManagement() {
     }
   };
 
+  /* =====================================================
+     INITIAL LOAD
+  ===================================================== */
+
   useEffect(() => {
     loadBooks();
   }, []);
 
-  /* =========================
+  /* =====================================================
      CLEAR MESSAGES
-  ========================= */
+  ===================================================== */
 
   const clearMessages = () => {
     setError("");
+
     setSuccess("");
   };
 
-  /* =========================
-     FILTER
-  ========================= */
+  /* =====================================================
+     FILTER BOOKS
+  ===================================================== */
 
   const filteredBooks = useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -186,9 +220,9 @@ function BooksManagement() {
     });
   }, [books, search, categoryFilter, availabilityFilter]);
 
-  /* =========================
+  /* =====================================================
      ADD BOOK
-  ========================= */
+  ===================================================== */
 
   const handleAddBook = () => {
     clearMessages();
@@ -204,9 +238,9 @@ function BooksManagement() {
     setShowForm(true);
   };
 
-  /* =========================
+  /* =====================================================
      EDIT BOOK
-  ========================= */
+  ===================================================== */
 
   const handleEditBook = (book) => {
     clearMessages();
@@ -240,9 +274,9 @@ function BooksManagement() {
     setShowForm(true);
   };
 
-  /* =========================
+  /* =====================================================
      CLOSE FORM
-  ========================= */
+  ===================================================== */
 
   const closeForm = () => {
     if (formLoading) {
@@ -260,9 +294,9 @@ function BooksManagement() {
     });
   };
 
-  /* =========================
-     INPUT
-  ========================= */
+  /* =====================================================
+     INPUT CHANGE
+  ===================================================== */
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -275,9 +309,9 @@ function BooksManagement() {
     setFormError("");
   };
 
-  /* =========================
+  /* =====================================================
      VALIDATION
-  ========================= */
+  ===================================================== */
 
   const validateForm = () => {
     if (!formData.title.trim()) {
@@ -319,9 +353,9 @@ function BooksManagement() {
     return "";
   };
 
-  /* =========================
-     PAYLOAD
-  ========================= */
+  /* =====================================================
+     PREPARE BOOK DATA
+  ===================================================== */
 
   const prepareBookData = () => ({
     title: formData.title.trim(),
@@ -349,9 +383,9 @@ function BooksManagement() {
     description: formData.description.trim() || null,
   });
 
-  /* =========================
+  /* =====================================================
      SAVE BOOK
-  ========================= */
+  ===================================================== */
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -393,9 +427,9 @@ function BooksManagement() {
     }
   };
 
-  /* =========================
-     DELETE
-  ========================= */
+  /* =====================================================
+     DELETE BOOK
+  ===================================================== */
 
   const handleDeleteConfirm = async () => {
     if (!deleteBookData) {
@@ -409,23 +443,42 @@ function BooksManagement() {
 
       await deleteBook(deleteBookData.id);
 
-      setSuccess("Book deleted successfully.");
-
+      /*
+       * IMPORTANT:
+       * Close the delete modal immediately after
+       * successful deletion.
+       */
       setDeleteBookData(null);
+
+      setSuccess("Book deleted successfully.");
 
       await loadBooks();
     } catch (err) {
-      console.error(err);
+      console.error("Delete book error:", err);
 
-      setError(err.message || "Unable to delete book.");
+      /*
+       * IMPORTANT:
+       * Even when the backend rejects deletion
+       * because the book is borrowed, close the
+       * confirmation popup.
+       */
+      setDeleteBookData(null);
+
+      /*
+       * Display backend error if available.
+       */
+      setError(
+        err.message ||
+          "This book cannot be deleted because it is currently borrowed.",
+      );
     } finally {
       setDeleteLoading(false);
     }
   };
 
-  /* =========================
+  /* =====================================================
      STATISTICS
-  ========================= */
+  ===================================================== */
 
   const totalBooks = books.length;
 
@@ -435,13 +488,15 @@ function BooksManagement() {
 
   const unavailableBooks = totalBooks - availableBooks;
 
-  /* =========================
+  /* =====================================================
      UI
-  ========================= */
+  ===================================================== */
 
   return (
     <div className="books-management-page">
-      {/* HEADER */}
+      {/* =================================================
+          HEADER
+      ================================================= */}
 
       <div className="books-management-header">
         <div>
@@ -462,7 +517,9 @@ function BooksManagement() {
         </button>
       </div>
 
-      {/* SUCCESS */}
+      {/* =================================================
+          SUCCESS MESSAGE
+      ================================================= */}
 
       {success && (
         <div className="books-management-alert success">
@@ -476,7 +533,9 @@ function BooksManagement() {
         </div>
       )}
 
-      {/* ERROR */}
+      {/* =================================================
+          ERROR MESSAGE
+      ================================================= */}
 
       {error && (
         <div className="books-management-alert error">
@@ -490,7 +549,9 @@ function BooksManagement() {
         </div>
       )}
 
-      {/* STATS */}
+      {/* =================================================
+          STATISTICS
+      ================================================= */}
 
       <div className="books-management-stats">
         <div className="book-stat-card">
@@ -530,7 +591,9 @@ function BooksManagement() {
         </div>
       </div>
 
-      {/* TOOLBAR */}
+      {/* =================================================
+          TOOLBAR
+      ================================================= */}
 
       <div className="books-management-toolbar">
         <div className="books-search">
@@ -586,7 +649,9 @@ function BooksManagement() {
         </button>
       </div>
 
-      {/* RESULT COUNT */}
+      {/* =================================================
+          RESULT COUNT
+      ================================================= */}
 
       {!loading && (
         <div className="books-result-count">
@@ -595,7 +660,9 @@ function BooksManagement() {
         </div>
       )}
 
-      {/* LOADING */}
+      {/* =================================================
+          LOADING / EMPTY / TABLE
+      ================================================= */}
 
       {loading ? (
         <div className="books-management-state">
@@ -606,8 +673,6 @@ function BooksManagement() {
           <p>Getting the latest catalogue from the library server.</p>
         </div>
       ) : filteredBooks.length === 0 ? (
-        /* EMPTY */
-
         <div className="books-management-empty">
           <div className="books-empty-icon">
             <BookOpen size={35} />
@@ -636,7 +701,9 @@ function BooksManagement() {
               className="books-empty-clear"
               onClick={() => {
                 setSearch("");
+
                 setCategoryFilter("");
+
                 setAvailabilityFilter("");
               }}
             >
@@ -645,8 +712,6 @@ function BooksManagement() {
           )}
         </div>
       ) : (
-        /* TABLE */
-
         <div className="books-table-wrapper">
           <table className="books-management-table">
             <thead>
@@ -675,6 +740,8 @@ function BooksManagement() {
 
                 return (
                   <tr key={book.id}>
+                    {/* BOOK */}
+
                     <td>
                       <div className="management-book-cell">
                         <div className="management-book-cover">
@@ -703,15 +770,21 @@ function BooksManagement() {
                       </div>
                     </td>
 
+                    {/* CATEGORY */}
+
                     <td>
                       <span className="book-category-badge">
                         {getCategoryName(book)}
                       </span>
                     </td>
 
+                    {/* ISBN */}
+
                     <td>
                       <span className="book-isbn">{book.isbn || "—"}</span>
                     </td>
+
+                    {/* COPIES */}
 
                     <td>
                       <div className="book-copies">
@@ -720,6 +793,8 @@ function BooksManagement() {
                         <span>/ {total}</span>
                       </div>
                     </td>
+
+                    {/* STATUS */}
 
                     <td>
                       <span
@@ -737,8 +812,12 @@ function BooksManagement() {
                       </span>
                     </td>
 
+                    {/* ACTIONS */}
+
                     <td>
                       <div className="book-table-actions">
+                        {/* EDIT */}
+
                         <button
                           type="button"
                           className="book-edit-action"
@@ -747,6 +826,8 @@ function BooksManagement() {
                         >
                           <Edit3 size={15} />
                         </button>
+
+                        {/* DELETE */}
 
                         <button
                           type="button"
@@ -766,7 +847,9 @@ function BooksManagement() {
         </div>
       )}
 
-      {/* ADD / EDIT MODAL */}
+      {/* =================================================
+          ADD / EDIT MODAL
+      ================================================= */}
 
       {showForm && (
         <div className="books-modal-overlay" onClick={closeForm}>
@@ -774,6 +857,8 @@ function BooksManagement() {
             className="books-form-modal"
             onClick={(event) => event.stopPropagation()}
           >
+            {/* HEADER */}
+
             <div className="books-modal-header">
               <div>
                 <span>
@@ -801,6 +886,8 @@ function BooksManagement() {
                 {formError}
               </div>
             )}
+
+            {/* FORM */}
 
             <form className="books-management-form" onSubmit={handleSubmit}>
               {/* TITLE */}
@@ -896,7 +983,7 @@ function BooksManagement() {
                 </div>
               </div>
 
-              {/* YEAR */}
+              {/* PUBLICATION YEAR */}
 
               <div className="books-form-field">
                 <label>Publication Year</label>
@@ -917,7 +1004,7 @@ function BooksManagement() {
                 </div>
               </div>
 
-              {/* TOTAL */}
+              {/* TOTAL COPIES */}
 
               <div className="books-form-field">
                 <label>Total Copies *</label>
@@ -936,7 +1023,7 @@ function BooksManagement() {
                 </div>
               </div>
 
-              {/* AVAILABLE */}
+              {/* AVAILABLE COPIES */}
 
               <div className="books-form-field">
                 <label>Available Copies *</label>
@@ -956,7 +1043,7 @@ function BooksManagement() {
                 </div>
               </div>
 
-              {/* COVER */}
+              {/* COVER IMAGE */}
 
               <div className="books-form-field full">
                 <label>Cover Image URL</label>
@@ -1026,7 +1113,9 @@ function BooksManagement() {
         </div>
       )}
 
-      {/* DELETE MODAL */}
+      {/* =================================================
+          DELETE MODAL
+      ================================================= */}
 
       {deleteBookData && (
         <div
@@ -1037,18 +1126,28 @@ function BooksManagement() {
             className="books-delete-modal"
             onClick={(event) => event.stopPropagation()}
           >
+            {/* DELETE ICON */}
+
             <div className="books-delete-icon">
               <Trash2 size={24} />
             </div>
 
+            {/* TITLE */}
+
             <h2>Delete Book?</h2>
+
+            {/* MESSAGE */}
 
             <p>
               Are you sure you want to delete{" "}
               <strong>"{deleteBookData.title}"</strong>?
             </p>
 
+            {/* ACTIONS */}
+
             <div className="books-delete-actions">
+              {/* CANCEL */}
+
               <button
                 type="button"
                 className="books-delete-cancel"
@@ -1057,6 +1156,8 @@ function BooksManagement() {
               >
                 Cancel
               </button>
+
+              {/* DELETE */}
 
               <button
                 type="button"
